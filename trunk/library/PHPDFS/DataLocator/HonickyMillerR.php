@@ -9,9 +9,9 @@
 /**
  *  Exception class
  */
-require_once('Exception.php');
+require_once('PHPDFS/DataLocator/Exception.php');
 
-class DataLocator_HonickyMillerR
+class PHPDFS_DataLocator_HonickyMillerR
 {
 
     /**
@@ -88,7 +88,7 @@ class DataLocator_HonickyMillerR
     public function __construct( $dataConfig ){
 
         if( !isset( $dataConfig['clusters'] ) || !count( $dataConfig['clusters'] ) ){
-            throw new DataLocator_Exception("data config to the Honicky-Miller locator does not contain a valid clusters property. bad joo joos mon!");
+            throw new PHPDFS_DataLocator_Exception("data config to the Honicky-Miller locator does not contain a valid clusters property. bad joo joos mon!");
         }
 
         $this->replicationDegree = $dataConfig['replicationDegree'];
@@ -130,7 +130,7 @@ class DataLocator_HonickyMillerR
         $replicationDegree = $this->replicationDegree;
         // throw an exception if the data is no good
         if( ( $totalNodes <= 0 )  || ( $totalClusters <= 0 ) ){
-            throw new DataLocator_Exception("the total nodes or total clusters is negative or 0.  bad joo joos!");
+            throw new PHPDFS_DataLocator_Exception("the total nodes or total clusters is negative or 0.  bad joo joos!");
         }
 
         $sumRemainingNodes = $totalNodes;
@@ -166,7 +166,7 @@ class DataLocator_HonickyMillerR
 
             // prevent an infinite loop, in case there is a bug
             if( $currentCluster < 0 ){
-                throw new DataLocator_Exception("the cluster index became negative while we were looking for the following id: $objKey.  This should never happen with any key.  There is a bug or maybe your joo joos are BAD!");
+                throw new PHPDFS_DataLocator_Exception("the cluster index became negative while we were looking for the following id: $objKey.  This should never happen with any key.  There is a bug or maybe your joo joos are BAD!");
             }
 
             $clusterData = $clusterConfig[$currentCluster];
@@ -223,7 +223,7 @@ class DataLocator_HonickyMillerR
                 // this way we can reach into our data config and get the object and return it
                 $relNode = $currentCluster ? ( $absNode % $currentCluster ) : $absNode;
                 if(!isset( $clusterData['nodes'][$relNode] )){
-                    throw new DataLocator_Exception("node $relNode in cluster $currentCluster does not exist. Mighty bad joo joos Mon!");
+                    throw new PHPDFS_DataLocator_Exception("node $relNode in cluster $currentCluster does not exist. Mighty bad joo joos Mon!");
                 }
                 // reach into the data config and return the data
                 $nodeData = $clusterData['nodes'][$relNode];

@@ -9,9 +9,9 @@
 /**
  *  Exception class
  */
-require_once('Exception.php');
+require_once('PHPDFS/DataLocator/Exception.php');
 
-class DataLocator_HonickyMillerW
+class PHPDFS_DataLocator_HonickyMillerW
 {
 
     /**
@@ -74,7 +74,7 @@ class DataLocator_HonickyMillerW
     public function __construct( $dataConfig ){
 
         if( !isset( $dataConfig['clusters'] ) || !count( $dataConfig['clusters'] ) ){
-            throw new DataLocator_Exception("data config to the Honicky-Miller locator does not contain a valid clusters property");
+            throw new PHPDFS_DataLocator_Exception("data config to the Honicky-Miller locator does not contain a valid clusters property");
         }
 
         $this->totalClusters = count($dataConfig['clusters']);
@@ -109,7 +109,7 @@ class DataLocator_HonickyMillerW
         
         // throw an exception if the data is no good
         if( ( $totalNodes <= 0 )  || ( $totalClusters <= 0 ) ){
-            throw new DataLocator_Exception("the total nodes or total clusters is negative");
+            throw new PHPDFS_DataLocator_Exception("the total nodes or total clusters is negative");
         }
 
         $sumRemainingNodes = $totalNodes;
@@ -145,7 +145,7 @@ class DataLocator_HonickyMillerW
 
             // prevent an infinite loop, in case there is a bug
             if( $currentCluster < 0 ){
-                throw DataLocator_Exception("the cluster index became negative while we were looking for the following id: $objKey.  This should never happen with any key.  Try checking the toothpaste you are using for some clues.");
+                throw PHPDFS_DataLocator_Exception("the cluster index became negative while we were looking for the following id: $objKey.  This should never happen with any key.  Try checking the toothpaste you are using for some clues.");
             }
 
             $clusterData = $clusterConfig[$currentCluster];

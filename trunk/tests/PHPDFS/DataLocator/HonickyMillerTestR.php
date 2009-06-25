@@ -19,13 +19,12 @@ require_once 'PHPUnit/Runner/Version.php';
 require_once 'PHPUnit/TextUI/TestRunner.php';
 require_once 'PHPUnit/Util/Filter.php';
 
-require_once '../../library/DataLocator/HonickyMillerR.php';
+require_once 'PHPDFS/DataLocator/HonickyMillerR.php';
 /**
- * @category   GXC
  * @package    DataLocator
  * @subpackage UnitTests
  */
-class DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
+class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
 {
     /**
      * holds the GXC_VO that is used for the tests
@@ -43,8 +42,8 @@ class DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
      */
     public function testInstance()
     {
-        $hm = new DataLocator_HonickyMillerR( $this->data_config );
-        $this->assertType( 'DataLocator_HonickyMillerR', $hm  );
+        $hm = new PHPDFS_DataLocator_HonickyMillerR( $this->data_config );
+        $this->assertType( 'PHPDFS_DataLocator_HonickyMillerR', $hm  );
     }
 
    /**
@@ -55,10 +54,10 @@ class DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
     {
         $badConf['clusters'] = array();
         try{
-            $hm = new DataLocator_HonickyMillerR( $badConf );
+            $hm = new PHPDFS_DataLocator_HonickyMillerR( $badConf );
             $this->fail("successfully instantiated the locator when we should have failed");
-        } catch( DataLocator_Exception $e){
-            $this->assertType('DataLocator_Exception', $e);
+        } catch( PHPDFS_DataLocator_Exception $e){
+            $this->assertType('PHPDFS_DataLocator_Exception', $e);
         }
     }
     
@@ -69,7 +68,7 @@ class DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
         $uuid = 'random_file_name';
         $replicaNo = 2;
 
-        $hm = new DataLocator_HonickyMillerR( $this->data_config );
+        $hm = new PHPDFS_DataLocator_HonickyMillerR( $this->data_config );
 
         $node = $hm->findNode( $uuid, $replicaNo );
         $nodeHost = $node['proxyUrl'];
@@ -96,7 +95,7 @@ class DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
         $clusterToWeight = 0;
         $weight = 1;
 
-        $hm = new DataLocator_HonickyMillerR( 
+        $hm = new PHPDFS_DataLocator_HonickyMillerR(
             $this->makeConfig($numClusters, $nodesPerCluster, $replicaCount, $clusterToWeight, $weight)
         );
 

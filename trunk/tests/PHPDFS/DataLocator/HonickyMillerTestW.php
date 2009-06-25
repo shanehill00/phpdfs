@@ -19,13 +19,12 @@ require_once 'PHPUnit/Runner/Version.php';
 require_once 'PHPUnit/TextUI/TestRunner.php';
 require_once 'PHPUnit/Util/Filter.php';
 
-require_once '../../library/DataLocator/HonickyMillerW.php';
+require_once 'PHPDFS/DataLocator/HonickyMillerW.php';
 /**
- * @category   GXC
  * @package    DataLocator
  * @subpackage UnitTests
  */
-class DataLocator_HonickyMillerTestW extends PHPUnit_Framework_TestCase
+class PHPDFS_DataLocator_HonickyMillerTestW extends PHPUnit_Framework_TestCase
 {
     /**
      * holds the GXC_VO that is used for the tests
@@ -43,8 +42,8 @@ class DataLocator_HonickyMillerTestW extends PHPUnit_Framework_TestCase
      */
     public function testInstance()
     {
-        $hm = new DataLocator_HonickyMillerW( $this->data_config );
-        $this->assertType( 'DataLocator_HonickyMillerW', $hm  );
+        $hm = new PHPDFS_DataLocator_HonickyMillerW( $this->data_config );
+        $this->assertType( 'PHPDFS_DataLocator_HonickyMillerW', $hm  );
     }
 
    /**
@@ -55,10 +54,10 @@ class DataLocator_HonickyMillerTestW extends PHPUnit_Framework_TestCase
     {
         $badConf['clusters'] = array();
         try{
-            $hm = new DataLocator_HonickyMillerW( $badConf );
+            $hm = new PHPDFS_DataLocator_HonickyMillerW( $badConf );
             $this->fail("successfully instantiated the locator when we should have failed");
-        } catch( DataLocator_Exception $e){
-            $this->assertType('DataLocator_Exception', $e);
+        } catch( PHPDFS_DataLocator_Exception $e){
+            $this->assertType('PHPDFS_DataLocator_Exception', $e);
         }
     }
     
@@ -71,7 +70,7 @@ class DataLocator_HonickyMillerTestW extends PHPUnit_Framework_TestCase
         $replicaNo = 1;
         $replicaMax = 3;
 
-        $hm = new DataLocator_HonickyMillerW( $this->data_config );
+        $hm = new PHPDFS_DataLocator_HonickyMillerW( $this->data_config );
 
         $node = $hm->findNode( $uuid );
         // now we repeat the operation 10 times and see that we get the same node back each time

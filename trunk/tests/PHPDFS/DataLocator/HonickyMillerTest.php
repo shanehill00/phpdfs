@@ -19,13 +19,12 @@ require_once 'PHPUnit/Runner/Version.php';
 require_once 'PHPUnit/TextUI/TestRunner.php';
 require_once 'PHPUnit/Util/Filter.php';
 
-require_once '../../library/DataLocator/HonickyMiller.php';
+require_once 'PHPDFS/DataLocator/HonickyMiller.php';
 /**
- * @category   GXC
  * @package    DataLocator
  * @subpackage UnitTests
  */
-class DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
+class PHPDFS_DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
 {
     /**
      * holds the GXC_VO that is used for the tests
@@ -43,8 +42,8 @@ class DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
      */
     public function testInstance()
     {
-        $hm = new DataLocator_HonickyMiller( $this->data_config );
-        $this->assertType( 'DataLocator_HonickyMiller', $hm  );
+        $hm = new PHPDFS_DataLocator_HonickyMiller( $this->data_config );
+        $this->assertType( 'PHPDFS_DataLocator_HonickyMiller', $hm  );
     }
 
    /**
@@ -55,10 +54,10 @@ class DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
     {
         $badConf['clusters'] = array();
         try{
-            $hm = new DataLocator_HonickyMiller( $badConf );
+            $hm = new PHPDFS_DataLocator_HonickyMiller( $badConf );
             $this->fail("successfully instantiated the locator when we should have failed");
-        } catch( DataLocator_Exception $e){
-            $this->assertType('DataLocator_Exception', $e);
+        } catch( PHPDFS_DataLocator_Exception $e){
+            $this->assertType('PHPDFS_DataLocator_Exception', $e);
         }
     }
     
@@ -66,7 +65,7 @@ class DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
     * Test that we consistently get the same data node for the same id.
     */
     public function testFindNode(){
-        $hm = new DataLocator_HonickyMiller(  $this->data_config );
+        $hm = new PHPDFS_DataLocator_HonickyMiller(  $this->data_config );
         $uuid = 'random_file_name';
         $node = $hm->findNode( $uuid );
         // now we repeat the operation 10 times and see that we get the same node back each time
