@@ -74,10 +74,9 @@ $nodes = $hm->findNodes( $params['name'] );
 print_r( array($_SERVER, $nodes) );
 
 $tmpPath = spoolFile( $config );
-disconnectClient();
+// disconnectClient();
 saveData( $params, $nodes, $config, $tmpPath );
 forwardData( $params, $nodes, $config, $tmpPath );
-unlink( $tmpPath );
 
 
 /////////////////////////////////////////
