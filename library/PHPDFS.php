@@ -126,6 +126,17 @@ class PHPDFS
 
     /**
      *
+     * integer value that indicates that
+     * we do not have a position in the list
+     * of target nodes.  essentially meaning thatw e are
+     * not a target node.
+     *
+     * @var <int>
+     */
+    const NO_TARGET_POSITION = -1;
+
+    /**
+     *
      * @param <type> $locator
      * @param <type> $config
      * @param <type> $params
@@ -250,8 +261,8 @@ class PHPDFS
 
     public function getNodePosition( ){
         if( is_null( $this->nodePosition ) ) {
-            // negative one means this node has no position
-            $this->nodePosition = -1;
+            // set this node as if it has no position
+            $this->nodePosition = self::NO_TARGET_POSITION;
             $thisHost = '';
             if( isset( $this->config['thisProxyUrl'] ) &&  $this->config['thisProxyUrl'] ){
                 $thisHost = $this->config['thisProxyUrl'];
@@ -269,6 +280,7 @@ class PHPDFS
             foreach( $targetNodes as $node ){
                 if( $node['proxyUrl'] == $thisHost ){
                     $isTarget = true;
+                    // we are a target node so set the node position
                     $this->nodePosition = $n;
                     break;
                 }
@@ -279,8 +291,9 @@ class PHPDFS
     }
 
     public function iAmATarget( ){
-        $isTarget = $this->getNodePosition( );
-        if( is_numeric( $isTarget ) && $isTarget >= 0 ){
+        $isTarget = false;
+        $targetPos = $this->getNodePosition( );
+        if( is_numeric( $targetPos ) && $targetPos > self::NO_TARGET_POSITION ){
             $isTarget = true;
         } else {
             $isTarget = false;
