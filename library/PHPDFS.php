@@ -141,7 +141,7 @@ class PHPDFS
         $this->params = $params;
 
         $this->finalPath = join($config['pathSeparator'],array($config['storageRoot'],$params['name']));
-        $this->tmpPath = join($config['pathSeparator'],array($config['tmpRoot'],uniqid(null, true)));
+        $this->tmpPath = join($config['pathSeparator'],array($config['tmpRoot'],uuid_create()));
     }
 
     public function spoolData( $disconnect = false ){
@@ -187,7 +187,7 @@ class PHPDFS
             // replica numbers start at 0, so we check to see
             // if the replica number value is less than the max replicas minus 1
             // if yes, that means we need to continue to replicate
-            // if not, that means we are done replicating and can quietly exit
+            // if not, that means we are done replicating and can quietly return
             $replica = (int) $this->params['replica'];
             $replicationDegree = (int) $this->config['replicationDegree'];
             if( $replica < ( $replicationDegree - 1 ) ) {
@@ -198,13 +198,14 @@ class PHPDFS
                 }
                 $replica++;
                 $position++;
+                // resolve the array index for our position
                 $position %= count( $targetNodes );
 
-                $url = "http://".join("/", array( $targetNodes[$position]['host'], $this->params['name'], $replica, $position ) );
+                $url = join("/", array( $targetNodes[$position]['host'], $this->params['name'], $replica, $position ) );
                 $this->sendData( $this->finalPath, $url );
             }
         } else {
-            $url = "http://".$targetNodes[0]['host']."/".$this->params['name'];
+            $url = join('/', array($targetNodes[0]['host'],$this->params['name'] ) );
             $this->sendData( $this->tmpPath, $url );
             unlink( $this->tmpPath );
         }
