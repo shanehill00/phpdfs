@@ -1,37 +1,16 @@
 <?php
-/**
-$clusters = array( 'replicationDegree' => 3, 'clusters' => array() );
-
-$numNodes = 3;
-$numClusters = 2;
-
-$diskNo = 0;
-for( $n = 0; $n < $numClusters; $n++){
-    $nodes = array();
-    for( $i = 0; $i < $numNodes; $i++ ){
-        $nodes[] =
-            array(
-                'proxyUrl' => "http://www.example.com$diskNo/$n/$i/put/your/image/here"
-            );
-        $diskNo++;
-    }
-    $clusterData = array();
-    $clusterData['weight'] =  (($n == 5) ? 1 : 1);
-    $clusterData['nodes'] = $nodes;
-
-    $clusters['clusters'][] = $clusterData;
-}
-
-//print_r($clusters);
-
-return $clusters;
-*/
 
 return array(
+
             'pathSeparator' => '/',
             'storageRoot' => '/tmp/testData',
             'tmpRoot' => '/tmp/testData',
             'thisHost' =>  '192.168.0.2:80',
+            'disconnectAfterSpooling' => true,
+            'locatorClassName' => 'PHPDFS_DataLocator_HonickyMillerR',
+            'locatorClassPath' => 'PHPDFS/DataLocator/HonickyMillerR.php',
+
+            //  data config below
             'replicationDegree' => 2,
             'clusters' => array(
                 // cluster 1
