@@ -65,168 +65,20 @@
  *
  */
 require_once("DataLocator/HonickyMillerR.php");
+require("PHPDFS.php");
 
-$params = getParamsFromUrl();
-$config = getConfig();
+$config = require('cluster_config.php');
 $hm = new DataLocator_HonickyMillerR( $config );
-$nodes = $hm->findNodes( $params['name'] );
+$params = getParamsFromUrl();
 
-print_r( array($_SERVER, $nodes) );
+//print_r( array($hm, $config, $params) );
 
-$tmpPath = spoolFile( $config );
+$dfs = new PHPDFS( $hm, $config, $params );
+$dfs->spoolFile();
 // disconnectClient();
-saveData( $params, $nodes, $config, $tmpPath );
-forwardData( $params, $nodes, $config, $tmpPath );
+$dfs->saveData( );
+$dfs->forwardData( );
 
-
-/////////////////////////////////////////
-// FUNCTIONS
-/////////////////////////////////////////
-
-function spoolFile( $config ){
-    $tmpPath = tempnam($config['tmpRoot'],"");
-
-    // write stdin to a temp file
-    $tmpFH = fopen($tmpPath, "w");
-    $putdata = fopen("php://input", "r");
-
-    while ($data = fread($putdata, 1024))
-      fwrite($tmpFH, $data);
-
-    fclose($tmpFH);
-    fclose($putdata);
-    return $tmpPath;
-}
-
-function saveData( $params, $nodes, $config, $tmpPath ){
-    $iAmATarget = iAmATarget( $params, $nodes, $config );
-    if( $iAmATarget ){
-        $finalPath = join($config['pathSeparator'],array($config['storageRoot'],$params['name']));
-
-        $copied = copy($tmpPath, $finalPath);
-
-        if( !$copied ){
-            // throw exception if the copy failed
-            throw new Exception("final copy operation failed");
-        }
-
-        unlink( $tmpPath );
-    }
-}
-
-/**
- *
- * @param <type> $urlParams
- * @param <type> $nodes
- * @param <type> $destPath
- */
-function forwardData( $params, $nodes, $config, $filePath ){
-    $iAmATarget = iAmATarget( $params, $nodes, $config );
-    if( $iAmATarget ){
-        // check whether or not we are done replicating.
-        //
-        // replicas are identified by the replica number.
-        // replica numbers start at 0, so we check to see
-        // if the replica number value is less than the max replicas minus 1
-        // if yes, that means we need to continue to replicate
-        // if not, that means we are done replicating and can quietly exit
-        $replica = (int) $params['replica'];
-        $replicationDegree = (int) $config['replicationDegree'];
-        if( $replica < ( $replicationDegree - 1 ) ) {
-
-            $position = $params['position'];
-            if( !is_numeric( $position ) ){
-                $position = getNodePosition( $params, $nodes, $config );
-            }
-            $replica++;
-            $position++;
-            $position %= count( $nodes );
-
-            $url = "http://".join("/", array( $nodes[$position]['host'], $params['name'], $replica, $position ) );
-            // below we overwrite the filePath that we were passed with the absolute final path
-            // we derive from the config and params that were passed to us.
-            // this way we know we are using the canonical data source for the replication
-            $filePath = join($config['pathSeparator'],array($config['storageRoot'],$params['name']));
-            sendData( $filePath, $url );
-        }
-    } else {
-        $url = "http://".$nodes[0]['host']."/".$params['name'];
-        sendData( $filePath, $url );
-        unlink( $filePath );
-    }
-}
-
-function sendData( $from, $url ){
-    $fh = fopen($from, "r");
-    $size = filesize( $from );
-    rewind($fh);
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_INFILE, $fh);
-    curl_setopt($ch, CURLOPT_INFILESIZE, $size );
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_PUT, 4);
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, Array('Expect: '));
-    $response = "";// curl_exec($ch);
-    print_r( array("curl_exec",$from, $url, $response, stream_get_meta_data($fh) ) );
-    fclose($fh);
-}
-
-/** LOOP ALERT
-* we can end up in a loop if for some reaon we find
-* an ip in the http_host that does not match what is in the configuration
-* and we end up forwarding to an ip address that resolves back to this machine.
-*
-* or if we do not have a http_host in the environment and we use the 'thisHost'
-* config value and that is wrong
-*
-* so the moral of the story is to make sure that either the $_SERVER['HTTP_HOST'] or the "myIp"
-* setting matches one of the hosts in the node config  or we make the assumption that this server
-* is just to act as a forwarding agent for the data on stdin.
-*
-*/
-
-function getNodePosition( $params, $nodes, $config ){
-    $nodePosition = null;
-    $thisHost = '';
-    if( isset( $config['thisHost'] ) &&  $config['thisHost'] ){
-        $thisHost = $config['thisHost'];
-    } else if( isset( $_SERVER['HTTP_HOST'] ) && $_SERVER['HTTP_HOST'] ){
-        $thisHost = $_SERVER['HTTP_HOST'];
-    } else {
-        throw new Exception(
-            "No ip address available for checking.  Please add one to the 'thisHost' configuration value ".
-            "or make sure that the _SERVER['HTTP_HOST'] var has a value"
-        );
-    }
-
-    // now check to see if $myIp is in the set of nodes we were passed
-    $n = 0;
-    foreach( $nodes as $node ){
-        if( $node['host'] == $thisHost ){
-            $isTarget = true;
-            $nodePosition = $n;
-            break;
-        }
-        $n++;
-    }
-    return $nodePosition;
-}
-
-function iAmATarget( $params, $nodes, $config ){
-    $isTarget = getNodePosition( $params, $nodes, $config );
-    if( is_numeric( $isTarget ) ){
-        $isTarget = true;
-    } else {
-        $isTarget = false;
-    }
-    return $isTarget;
-}
-
-function getConfig(){
-    return require 'cluster_config.php';
-}
 
 function getParamsFromUrl(){
     $params = array( 'name' => '', 'replica' => 0, 'position' => null );

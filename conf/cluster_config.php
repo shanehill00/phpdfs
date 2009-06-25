@@ -44,7 +44,7 @@ return array(
                          ),
                          // cluster 1 node 2 (2)
                          array(
-                            'host' => '192.168.0.2:81'
+                            'host' => '192.168.0.6:80'
                          ),
                      ),
                  ),
