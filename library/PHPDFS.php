@@ -80,17 +80,16 @@ class PHPDFS
 
         // write stdin to a temp file
         $tmpFH = fopen($this->tmpPath, "w");
-        $putdata = fopen("php://input", "r");
+        $putData = fopen("php://input", "r");
 
-        while ($data = fread($putdata, 1024))
+        while ($data = fread($putData, 1024))
           fwrite($tmpFH, $data);
 
         fclose($tmpFH);
-        fclose($putdata);
+        fclose($putData);
     }
 
     public function saveData( ){
-        $nodes = $this->getNodes();
         if(  $this->iAmATarget( ) ){
 
             $copied = copy($this->tmpPath, $this->finalPath);
@@ -106,12 +105,9 @@ class PHPDFS
 
     /**
      *
-     * @param <type> $urlParams
-     * @param <type> $nodes
-     * @param <type> $destPath
      */
     public function forwardData( ){
-        $nodes = $this->getNodes();
+        $targetNodes = $this->getTargetNodes();
         if( $this->iAmATarget() ){
             // check whether or not we are done replicating.
             //
@@ -126,23 +122,23 @@ class PHPDFS
 
                 $position = $this->params['position'];
                 if( !is_numeric( $position ) ){
-                    $position = $this->getNodePosition( $this->params, $nodes, $this->config );
+                    $position = $this->getNodePosition( $this->params, $targetNodes, $this->config );
                 }
                 $replica++;
                 $position++;
-                $position %= count( $nodes );
+                $position %= count( $targetNodes );
 
-                $url = "http://".join("/", array( $nodes[$position]['host'], $this->params['name'], $replica, $position ) );
+                $url = "http://".join("/", array( $targetNodes[$position]['host'], $this->params['name'], $replica, $position ) );
                 $this->sendData( $this->finalPath, $url );
             }
         } else {
-            $url = "http://".$nodes[0]['host']."/".$this->params['name'];
+            $url = "http://".$targetNodes[0]['host']."/".$this->params['name'];
             $this->sendData( $this->tmpPath, $url );
             unlink( $this->tmpPath );
         }
     }
 
-    public function getNodes(){
+    public function getTargetNodes(){
         if( !$this->targetNodes ){
             $this->targetNodes = $this->locator->findNodes( $this->params['name'] );
         }
@@ -160,7 +156,6 @@ class PHPDFS
         curl_setopt($ch, CURLOPT_PUT, 4);
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, Array('Expect: '));
         $response = ""; // curl_exec($ch);
         print_r( array("curl_exec",$from, $url, $response, stream_get_meta_data($fh), curl_errno($ch) ) );
         fclose($fh);
@@ -196,9 +191,9 @@ class PHPDFS
                 );
             }
 
-            $nodes = $this->getNodes();
+            $targetNodes = $this->getTargetNodes();
             $n = 0;
-            foreach( $nodes as $node ){
+            foreach( $targetNodes as $node ){
                 if( $node['host'] == $thisHost ){
                     $isTarget = true;
                     $this->nodePosition = $n;

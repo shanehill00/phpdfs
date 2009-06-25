@@ -11,7 +11,6 @@ curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_PUT, 4);
 curl_setopt($ch, CURLOPT_URL, $url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, Array('Expect: '));
 $response = curl_exec($ch);
 fclose($fh);
 print_r( $response );
