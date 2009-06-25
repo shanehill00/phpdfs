@@ -201,11 +201,11 @@ class PHPDFS
                 // resolve the array index for our position
                 $position %= count( $targetNodes );
 
-                $url = join("/", array( $targetNodes[$position]['host'], $this->params['name'], $replica, $position ) );
+                $url = join("/", array( $targetNodes[$position]['proxyUrl'], $this->params['name'], $replica, $position ) );
                 $this->sendData( $this->finalPath, $url );
             }
         } else {
-            $url = join('/', array($targetNodes[0]['host'],$this->params['name'] ) );
+            $url = join('/', array($targetNodes[0]['proxyUrl'],$this->params['name'] ) );
             $this->sendData( $this->tmpPath, $url );
             unlink( $this->tmpPath );
         }
@@ -239,7 +239,7 @@ class PHPDFS
     * an ip in the http_host that does not match what is in the configuration
     * and we end up forwarding to an ip address that resolves back to this machine.
     *
-    * or if we do not have a http_host in the environment and we use the 'thisHost'
+    * or if we do not have a http_host in the environment and we use the 'thisProxyUrl'
     * config value and that is wrong
     *
     * so the moral of the story is to make sure that either the $_SERVER['HTTP_HOST'] or the "myIp"
@@ -253,13 +253,13 @@ class PHPDFS
             // negative one means this node has no position
             $this->nodePosition = -1;
             $thisHost = '';
-            if( isset( $this->config['thisHost'] ) &&  $this->config['thisHost'] ){
-                $thisHost = $this->config['thisHost'];
+            if( isset( $this->config['thisProxyUrl'] ) &&  $this->config['thisProxyUrl'] ){
+                $thisHost = $this->config['thisProxyUrl'];
             } else if( isset( $_SERVER['HTTP_HOST'] ) && $_SERVER['HTTP_HOST'] ){
                 $thisHost = $_SERVER['HTTP_HOST'];
             } else {
                 throw new Exception(
-                    "No ip address available for checking.  Please add one to the 'thisHost' configuration value ".
+                    "No ip address available for checking.  Please add one to the 'thisProxyUrl' configuration value ".
                     "or make sure that the _SERVER['HTTP_HOST'] var has a value"
                 );
             }
@@ -267,7 +267,7 @@ class PHPDFS
             $targetNodes = $this->getTargetNodes();
             $n = 0;
             foreach( $targetNodes as $node ){
-                if( $node['host'] == $thisHost ){
+                if( $node['proxyUrl'] == $thisHost ){
                     $isTarget = true;
                     $this->nodePosition = $n;
                     break;
