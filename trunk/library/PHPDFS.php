@@ -1,6 +1,6 @@
 <?php
 
-class PHPDFSR
+class PHPDFS
 {
 
     /**
