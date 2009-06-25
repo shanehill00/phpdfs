@@ -11,14 +11,14 @@ return array(
 
             //  node and cluster config below
             'replicationDegree' => 2,
-            'thisHost' =>  'http://192.168.0.2:80/dfs.php',
+            'thisProxyUrl' =>  'http://192.168.0.2:80/dfs.php',
             'clusters' => array(
                 // cluster 1
                 array(
                     'weight' => 1,
                     'nodes' =>array(
-                         array('host' => 'http://192.168.0.2:80/dfs.php',), // cluster 1 node 1 (1)
-                         array('host' => 'http://192.168.0.6:80/dfs.php',), // cluster 1 node 2 (2)
+                         array('proxyUrl' => 'http://192.168.0.2:80/dfs.php',), // cluster 1 node 1 (1)
+                         array('proxyUrl' => 'http://192.168.0.6:80/dfs.php',), // cluster 1 node 2 (2)
                      ),
                  ),
               ),
