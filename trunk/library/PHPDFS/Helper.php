@@ -2,8 +2,8 @@
 
 class PHPDFS_Helper {
 
-    public static function getConfig(){
-        return require 'cluster_config.php';
+    public static function getConfig( $name = "cluster_config.php" ){
+        return require $name;
     }
 
     public static function getParamsFromUrl(){
