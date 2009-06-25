@@ -240,8 +240,7 @@ class PHPDFS
         curl_setopt($ch, CURLOPT_PUT, 4);
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = ""; // curl_exec($ch);
-        print_r( array("curl_exec",$from, $url, $response, stream_get_meta_data($fh), curl_errno($ch) ) );
+        $response = curl_exec($ch);
         fclose($fh);
     }
 
