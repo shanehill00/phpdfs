@@ -1,6 +1,6 @@
 <?php
 
-class PHPDFS
+class PHPDFSR
 {
 
     /**
@@ -126,18 +126,18 @@ class PHPDFS
 
                 $position = $this->params['position'];
                 if( !is_numeric( $position ) ){
-                    $position = getNodePosition( $this->params, $nodes, $this->config );
+                    $position = $this->getNodePosition( $this->params, $nodes, $this->config );
                 }
                 $replica++;
                 $position++;
                 $position %= count( $nodes );
 
                 $url = "http://".join("/", array( $nodes[$position]['host'], $this->params['name'], $replica, $position ) );
-                sendData( $this->finalPath, $url );
+                $this->sendData( $this->finalPath, $url );
             }
         } else {
             $url = "http://".$nodes[0]['host']."/".$this->params['name'];
-            sendData( $this->tmpPath, $url );
+            $this->sendData( $this->tmpPath, $url );
             unlink( $this->tmpPath );
         }
     }
