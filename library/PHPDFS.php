@@ -155,6 +155,22 @@ class PHPDFS
         $this->tmpPath = join($config['pathSeparator'],array($config['tmpRoot'],uuid_create()));
     }
 
+    public function getData(){
+        $dataFH = fopen( $this->finalPath, "r");
+
+        $finfo = finfo_open(FILEINFO_MIME, $this->config["magicDbPath"] );
+        $contentType = finfo_file($finfo, $this->finalPath );
+        finfo_close( $finfo );
+
+        //$contentType = 'image/png';
+        header("Content-Type: $contentType");
+
+        while ($data = fread($dataFH, 1024))
+          echo($data);
+
+        fclose($dataFH);
+    }
+
     public function spoolData( $disconnect = false ){
 
         // write stdin to a temp file
