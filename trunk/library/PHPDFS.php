@@ -194,19 +194,23 @@ class PHPDFS
     }
 
     public function getData(){
-        $dataFH = fopen( $this->finalPath, "r");
+        if( file_exists( $this->finalPath) ){
+            $dataFH = fopen( $this->finalPath, "r");
 
-        $finfo = finfo_open(FILEINFO_MIME, $this->config["magicDbPath"] );
-        $contentType = finfo_file($finfo, $this->finalPath );
-        finfo_close( $finfo );
+            $finfo = finfo_open(FILEINFO_MIME, $this->config["magicDbPath"] );
+            $contentType = finfo_file($finfo, $this->finalPath );
+            finfo_close( $finfo );
 
-        //$contentType = 'image/png';
-        header("Content-Type: $contentType");
+            header("Content-Type: $contentType");
 
-        while ($data = fread($dataFH, 1024))
-          echo($data);
+            while ($data = fread($dataFH, 1024))
+              echo($data);
 
-        fclose($dataFH);
+            fclose($dataFH);
+        } else {
+            $notFound = str_replace($this->config['storageRoot'], "", $this->finalPath);
+            PHPDFS_Helper::send404( $notFound );
+        }
     }
 
     public function putData(){

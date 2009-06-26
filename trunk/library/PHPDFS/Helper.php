@@ -69,4 +69,19 @@ class PHPDFS_Helper {
         flush();
     }
     
+    public static function send404( $path = "" ) {
+        // use a 204 no response header
+        header( "Response: 404" ) ;
+        if( ob_get_length() ){
+            ob_end_clean();
+        }
+        header("Connection: close");
+        ob_start();
+        header("Content-Length: 0");
+        echo("cannot find $path");
+        ob_end_flush();
+        flush();
+        session_write_close();
+        flush();
+    }
 }
