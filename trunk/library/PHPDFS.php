@@ -199,6 +199,35 @@ class PHPDFS
         fclose($dataFH);
     }
 
+    public function putData(){
+        // get the data from stdin and put it in a temp file
+        // we will disconnect the client at this point if we are configured to do so
+        // otherwise we hang on to the client, which in most cases is really bad
+        // because you might stay connected until the replication chain is completed
+        $this->spoolData( );
+
+        // save the data to the appropriate directory and remove the spooled file
+        // but only if we are a targetNode, otherwise DO NOTHING
+        $this->saveData( );
+
+        // forward the data on to the next node
+        // the reasons for forwarding are:
+        //
+        // we are NOT a targetNode and are just the first node
+        // to receive the upload, so we forward the data to the first targetNode
+        // and remove the spooled file
+        //
+        // OR we are a targetNode and need to fulfill the replication requirements
+        // so, we forward data to the next targetNode in our list.
+        // however, if we are the last replication targetNode, we DO NOTHING.
+        $this->forwardData( );
+    }
+
+    public function deleteData(){
+        $this->_deleteData( );
+        $this->forwardDelete();
+    }
+
     public function spoolData( $disconnect = false ){
 
         // write stdin to a temp file
@@ -216,6 +245,16 @@ class PHPDFS
         }
     }
 
+    protected function _deleteData( ){
+        if(  $this->iAmATarget( ) && file_exists( $this->finalPath ) ){
+            $deleted = unlink( $this->finalPath );
+            if( !$deleted ){
+                // throw exception if the copy failed
+                throw new Exception("could not unlink ".$this->finalPath);
+            }
+        }
+    }
+
     public function saveData( ){
         if(  $this->iAmATarget( ) ){
 
@@ -230,10 +269,7 @@ class PHPDFS
         }
     }
 
-    /**
-     *
-     */
-    public function forwardData( ){
+    protected function forwardDelete( ){
         $targetNodes = $this->getTargetNodes();
         if( $this->iAmATarget() ){
             // check whether or not we are done replicating.
@@ -249,7 +285,42 @@ class PHPDFS
 
                 $position = $this->params['position'];
                 if( !is_numeric( $position ) ){
-                    $position = $this->getNodePosition( $this->params, $targetNodes, $this->config );
+                    $position = $this->getNodePosition( );
+                }
+                $replica++;
+                $position++;
+                // resolve the array index for our position in the list of targetNodes
+                $position %= count( $targetNodes );
+
+                $url = join("/", array( $targetNodes[$position]['proxyUrl'], $this->params['name'], $replica, $position ) );
+                $this->sendDelete( $url );
+            }
+        } else {
+            $url = join('/', array($targetNodes[0]['proxyUrl'],$this->params['name'] ) );
+            $this->sendDelete( $url );
+        }
+    }
+
+    /**
+     *
+     */
+    protected function forwardData( ){
+        $targetNodes = $this->getTargetNodes();
+        if( $this->iAmATarget() ){
+            // check whether or not we are done replicating.
+            //
+            // replicas are identified by the replica number.
+            // replica numbers start at 0, so we check to see
+            // if the replica number value is less than the max replicas minus 1
+            // if yes, that means we need to continue to replicate
+            // if not, that means we are done replicating and can quietly return
+            $replica = (int) $this->params['replica'];
+            $replicationDegree = (int) $this->config['replicationDegree'];
+            if( $replica < ( $replicationDegree - 1 ) ) {
+
+                $position = $this->params['position'];
+                if( !is_numeric( $position ) ){
+                    $position = $this->getNodePosition( );
                 }
                 $replica++;
                 $position++;
@@ -271,6 +342,15 @@ class PHPDFS
             $this->targetNodes = $this->locator->findNodes( $this->params['name'] );
         }
         return $this->targetNodes;
+    }
+
+    protected function sendDelete( $url ){
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
     }
 
     protected function sendData( $from, $url ){
