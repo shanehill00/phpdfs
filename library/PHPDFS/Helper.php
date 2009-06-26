@@ -60,11 +60,7 @@ class PHPDFS_Helper {
         if( ob_get_length() ){
             ob_end_clean();
         }
-        header("Connection: close");
-        ob_start();
         header("Content-Length: 0");
-        ob_end_flush();
-        flush();
         session_write_close();
     }
     
@@ -72,15 +68,8 @@ class PHPDFS_Helper {
         // use a 204 no response header
         $msg = "cannot find $path";
         header( "HTTP/1.1 404 Not Found" ) ;
-        if( ob_get_length() ){
-            ob_end_clean();
-        }
-        //header("Connection: close");
-        ob_start();
         header("Content-Length: ".strlen($msg));
         echo($msg);
-        ob_end_flush();
-        flush();
         session_write_close();
     }
 }
