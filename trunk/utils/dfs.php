@@ -36,12 +36,5 @@ $config = PHPDFS_Helper::getConfig();
 $params = PHPDFS_Helper::getParamsFromUrl();
 
 $dfs = new PHPDFS( $config, $params );
-
-if( $_SERVER['REQUEST_METHOD'] == 'GET' ){
-    $dfs->getData();
-} else if( $_SERVER['REQUEST_METHOD'] == 'PUT' ){
-    $dfs->putData();
-} else if( $_SERVER['REQUEST_METHOD'] == 'DELETE' ){
-    $dfs->deleteData();
-}
+$dfs->handleRequest();
 

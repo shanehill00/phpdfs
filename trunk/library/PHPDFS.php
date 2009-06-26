@@ -183,6 +183,16 @@ class PHPDFS
         $this->tmpPath = join($config['pathSeparator'],array($config['tmpRoot'],uuid_create()));
     }
 
+    public function handleRequest(){
+        if( $_SERVER['REQUEST_METHOD'] == 'GET' ){
+            $this->getData();
+        } else if( $_SERVER['REQUEST_METHOD'] == 'PUT' ){
+            $this->putData();
+        } else if( $_SERVER['REQUEST_METHOD'] == 'DELETE' ){
+            $this->deleteData();
+        }
+    }
+
     public function getData(){
         $dataFH = fopen( $this->finalPath, "r");
 
