@@ -55,8 +55,8 @@ class PHPDFS_Helper {
     }
 
     public static function disconnectClient() {
-        // use a 204 no response header
-        header( "Response: 204" ) ;
+        // use a 204 no content header
+        header( "HTTP/1.1 204 No Content" ) ;
         if( ob_get_length() ){
             ob_end_clean();
         }
@@ -66,22 +66,21 @@ class PHPDFS_Helper {
         ob_end_flush();
         flush();
         session_write_close();
-        flush();
     }
     
     public static function send404( $path = "" ) {
         // use a 204 no response header
-        header( "Response: 404" ) ;
+        $msg = "cannot find $path";
+        header( "HTTP/1.1 404 Not Found" ) ;
         if( ob_get_length() ){
             ob_end_clean();
         }
-        header("Connection: close");
+        //header("Connection: close");
         ob_start();
-        header("Content-Length: 0");
-        echo("cannot find $path");
+        header("Content-Length: ".strlen($msg));
+        echo($msg);
         ob_end_flush();
         flush();
         session_write_close();
-        flush();
     }
 }
