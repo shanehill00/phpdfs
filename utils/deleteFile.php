@@ -27,21 +27,18 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-// this is the file that handles the uploads into the HM RUSH system
-
-require_once("PHPDFS.php");
-require_once("PHPDFS/Helper.php");
-
-$config = PHPDFS_Helper::getConfig();
-$params = PHPDFS_Helper::getParamsFromUrl();
-
-$dfs = new PHPDFS( $config, $params );
-
-if( $_SERVER['REQUEST_METHOD'] == 'GET' ){
-    $dfs->getData();
-} else if( $_SERVER['REQUEST_METHOD'] == 'PUT' ){
-    $dfs->putData();
-} else if( $_SERVER['REQUEST_METHOD'] == 'DELETE' ){
-    $dfs->deleteData();
+if( !isset( $argv[1] ) ){
+    throw new Exception("please include a url");
 }
+
+$url = $argv[1];
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+
+print_r( $response );
 
