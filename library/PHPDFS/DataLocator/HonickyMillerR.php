@@ -113,6 +113,7 @@ class PHPDFS_DataLocator_HonickyMillerR
      * @throws DataLocator_HonickyMiller_Exception
      *
      */
+    protected $nodes = array();
     public function __construct( $dataConfig ){
 
         if( !isset( $dataConfig['clusters'] ) || !count( $dataConfig['clusters'] ) ){
@@ -125,6 +126,9 @@ class PHPDFS_DataLocator_HonickyMillerR
         $largestNodeCountW = 0;
         foreach( $dataConfig['clusters'] as $cluster ){
             $nodeCount = count( $cluster['nodes'] );
+            for( $n = 0; $n < $nodeCount; $n++ ){
+                $this->nodes[] = $cluster['nodes'][$n];
+            }
             $nodeCountW = $nodeCount * $cluster[ 'weight' ];
             $this->clusters[] = $nodeCount;
             $this->totalNodes += $nodeCount;
@@ -150,7 +154,7 @@ class PHPDFS_DataLocator_HonickyMillerR
      */
     public function findNode( $objKey, $replica = 1 ){
 
-        $nodeInfo = null;
+        $nodeData = null;
         $clusters = $this->clusters;
         $totalClusters = $this->totalClusters;
         $totalNodes = $this->totalNodes;
@@ -187,10 +191,7 @@ class PHPDFS_DataLocator_HonickyMillerR
          * m = disks in current cluster
          * n = remaining nodes
          */
-        $mapped = false;
-        // while we are not mapped
-        // try and get a mapping
-        while( ! $mapped ){
+        while( ! $nodeData ){
 
             // prevent an infinite loop, in case there is a bug
             if( $currentCluster < 0 ){
@@ -231,6 +232,7 @@ class PHPDFS_DataLocator_HonickyMillerR
                 // map to server n^j + (v mod m^j )
                 // get the absolute position of the node relative to all nodes in all clusters
                 $absNode = $sumRemainingNodes + ( $v % $disksInCurrentCluster );
+                $nodeData = $this->nodes[$absNode];
 
             } else if($disksInCurrentCluster < $replicationDegree
                        && $randB < ($replicationDegree * $weight)
@@ -242,24 +244,13 @@ class PHPDFS_DataLocator_HonickyMillerR
                 // map to  n^j + (v mod R)
                 // get the absolute position of the node relative to all nodes in all clusters
                 $absNode = $sumRemainingNodes + ( $v % $replicationDegree );
-            }
-
-            if(!is_null($absNode)){
-                $mapped = true;
-                // we need the relative position of the node within the cluster
-                // so we take the modulus of the absnode %
-                // this way we can reach into our data config and get the object and return it
-                $relNode = $currentCluster ? ( $absNode % $currentCluster ) : $absNode;
-                if(!isset( $clusterData['nodes'][$relNode] )){
-                    throw new PHPDFS_DataLocator_Exception("node $relNode in cluster $currentCluster does not exist. Mighty bad joo joos Mon!");
-                }
-                // reach into the data config and return the data
-                $nodeData = $clusterData['nodes'][$relNode];
+                $nodeData = $this->nodes[$absNode];
             } else {
                 // this means we missed the cluster
                 // so we decrement to the previous cluster and look there
                 $currentCluster--;
             }
+
         }
         $num = 0;
         return $nodeData;

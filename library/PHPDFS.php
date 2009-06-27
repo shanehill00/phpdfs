@@ -176,6 +176,7 @@ class PHPDFS
         $locatorClassName = $config['locatorClassName'];
 
         $this->locator = new $locatorClassName( $config );
+
         $this->config = $config;
         $this->params = $params;
 
@@ -202,9 +203,7 @@ class PHPDFS
             finfo_close( $finfo );
 
             header("Content-Type: $contentType");
-
-            while ($data = fread($dataFH, 1024))
-              echo($data);
+            fpassthru($dataFH);
 
             fclose($dataFH);
         } else {
