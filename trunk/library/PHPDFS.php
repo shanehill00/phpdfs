@@ -165,6 +165,12 @@ class PHPDFS
 
     /**
      *
+     * @var <PHPDFS_Client>
+     */
+    protected $client;
+
+    /**
+     *
      * @param <type> $locator
      * @param <type> $config
      * @param <type> $params
@@ -175,6 +181,9 @@ class PHPDFS
         require_once( $config['locatorClassPath'] );
         $locatorClassName = $config['locatorClassName'];
 
+        require_once('PHPDFS/Client.php');
+        $this->client = new PHPDFS_Client();
+
         $this->locator = new $locatorClassName( $config );
 
         $this->config = $config;
@@ -183,6 +192,7 @@ class PHPDFS
         $this->finalPath = join($config['pathSeparator'],array($config['storageRoot'],$params['name']));
         $this->tmpPath = join($config['pathSeparator'],array($config['tmpRoot'],uuid_create()));
     }
+
 
     public function handleRequest(){
         if( $_SERVER['REQUEST_METHOD'] == 'GET' ){
@@ -196,13 +206,17 @@ class PHPDFS
 
     public function getData(){
         if( file_exists( $this->finalPath) ){
-            $dataFH = fopen( $this->finalPath, "r");
+            $dataFH = fopen( $this->finalPath, "rb");
 
             $finfo = finfo_open(FILEINFO_MIME, $this->config["magicDbPath"] );
             $contentType = finfo_file($finfo, $this->finalPath );
             finfo_close( $finfo );
 
+            //echo($contentType."\n");
+            //exit();
+
             header("Content-Type: $contentType");
+            header("Content-Length: ".filesize( $this->finalPath ));
             fpassthru($dataFH);
 
             fclose($dataFH);
