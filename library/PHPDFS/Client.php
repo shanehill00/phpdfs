@@ -38,24 +38,48 @@ class PHPDFS_Client{
     
     protected $locator = null;
 
+    const PHPDFS_PUT_ERR = 1;
+    const PHPDFS_DELETE_ERR = 2;
+    const PHPDFS_GET_ERR = 3;
+
+    protected $errs;
+
     public function __construct( $config ){
         require_once( $config['locatorClassPath'] );
         $locatorClassName = $config['locatorClassName'];
         $this->locator = new $locatorClassName( $config );
         $this->config = $config;
+
+        $this->errs = array(
+            self::PHPDFS_PUT_ERR => array(
+                'class' => 'PHPDFS_Client_PutException',
+                'msg'   => 'PUT Exception',
+                'require_once' => 'PHPDFS/Client/PutException.php'
+            ),
+            self::PHPDFS_DELETE_ERR => array(
+                'class' => 'PHPDFS_Client_DeleteException',
+                'msg'   => 'DELETE Exception',
+                'require_once' => 'PHPDFS/Client/DeleteException.php'
+            ),
+            self::PHPDFS_GET_ERR => array(
+                'class' => 'PHPDFS_Client_GetException',
+                'msg'   => 'GET Exception',
+                'require_once' => 'PHPDFS/Client/GetException.php'
+            ),
+        );
     }
 
     public function get( $fileId ){
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
             $url = join('/', array($paths[0]['url'],$fileId ) );
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_HEADER, false);
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_BINARYTRANSFER, true);
-            return curl_exec($ch);
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+            curl_setopt($curl, CURLOPT_HEADER, false);
+            curl_setopt($curl, CURLOPT_URL, $url);
+            curl_setopt($curl, CURLOPT_BINARYTRANSFER, true);
+            curl_exec($curl);
+            $this->checkError( $curl, self::PHPDFS_GET_ERR );
         }
     }
 
@@ -72,12 +96,13 @@ class PHPDFS_Client{
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
             $url = join('/', array($paths[0]['url'],$fileId ) );
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+            curl_setopt($curl, CURLOPT_URL, $url);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($curl);
+            $this->checkError( $curl, self::PHPDFS_DELETE_ERR, $response );
         }
     }
 
@@ -89,19 +114,29 @@ class PHPDFS_Client{
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
             $url = join('/', array($paths[0]['url'],$fileId ) );
-            $fh = fopen($filePath, "r");
+            $fh = fopen($filePath, "rb");
             $size = filesize( $filePath );
             rewind($fh);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_INFILE, $fh);
-            curl_setopt($ch, CURLOPT_INFILESIZE, $size );
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_PUT, 4);
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_INFILE, $fh);
+            curl_setopt($curl, CURLOPT_INFILESIZE, $size );
+            curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+            curl_setopt($curl, CURLOPT_PUT, 4);
+            curl_setopt($curl, CURLOPT_URL, $url);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($curl);
+            $this->checkError( $curl, self::PHPDFS_PUT_ERR, $response );
             fclose($fh);
         }
     }
 
+    protected function checkError( $curl, $phpDfsErrCode, $additionalInfo ){
+        if( curl_errno($curl) ){
+            $errInfo = $this->errs[ $phpDfsErrCode ];
+            require_once( $errInfo['require_once'] );
+            $exceptionClass = $errInfo['class'];
+            $msg = $phpDfsErrCode." - ".$errInfo['msg']. " : ".curl_errno($curl)." - " .curl_error($curl)." : $additionalInfo";
+            throw new $exceptionClass( $msg );
+        }
+    }
 }

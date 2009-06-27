@@ -129,15 +129,11 @@ class PHPDFS_DataLocator_HonickyMillerR
             for( $n = 0; $n < $nodeCount; $n++ ){
                 $this->nodes[] = $cluster['nodes'][$n];
             }
-            $nodeCountW = $nodeCount * $cluster[ 'weight' ];
             $this->clusters[] = $nodeCount;
             $this->totalNodes += $nodeCount;
-            $this->totalNodesW += $nodeCountW;
-            if( $nodeCountW > $largestNodeCountW ){
-                $this->prime = $this->getNextPositivePrime( $nodeCountW );
-                $largestNodeCountW = $nodeCountW;
-            }
+            $this->totalNodesW += ($nodeCount * $cluster[ 'weight' ]);
         }
+        $this->prime = $this->getNextPositivePrime( $this->totalNodes );
         $this->dataConfig = $dataConfig;
     }
     /**
