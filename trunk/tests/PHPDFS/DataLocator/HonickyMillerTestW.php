@@ -103,20 +103,21 @@ class PHPDFS_DataLocator_HonickyMillerTestW extends PHPUnit_Framework_TestCase
         // now we repeat the operation 10 times and see that we get the same node back each time
         $totalTime = 0;
         $N = 10;
-        for($i = 0; $i < $N; $i++){
+        $J = 1000;
+        for($j = 0; $j < $J; $j++){
+            for($i = 0; $i < $N; $i++){
+                $time = microtime(1);
+                $node2 = $hm->findNode( $uuid );
+                $totalTime += (microtime(1) - $time);
 
-            $time = microtime(1);
-            $node2 = $hm->findNode( $uuid );
-            $totalTime += (microtime(1) - $time);
-
-            $nodeHost = $node['proxyUrl'];
-            $nodeHost2 = $node2['proxyUrl'];
-            echo("id: $uuid : $nodeHost == $nodeHost2\n");
-            $this->assertNotEquals($nodeHost,'',"nodeHost is empty.  bad joos joos!");
-            $this->assertNotEquals($nodeHost2,'',"nodeHost2 is empty.  bad joos joos!");
-            $this->assertTrue( $nodeHost == $nodeHost2, "failed consistently fetching a node got $nodeHost == $nodeHost2" );
+                $nodeHost = $node['proxyUrl'];
+                $nodeHost2 = $node2['proxyUrl'];
+                $this->assertNotEquals($nodeHost,'',"nodeHost is empty.  bad joos joos!");
+                $this->assertNotEquals($nodeHost2,'',"nodeHost2 is empty.  bad joos joos!");
+                $this->assertTrue( $nodeHost == $nodeHost2, "failed consistently fetching a node got $nodeHost == $nodeHost2" );
+            }
         }
-        echo("totalTime: $totalTime\navg time:".($totalTime/$N));
+        echo("totalTime: $totalTime\navg time per lookup:".($totalTime/($N * $J) ) );
     }
 
     protected function getStatsStructure(){

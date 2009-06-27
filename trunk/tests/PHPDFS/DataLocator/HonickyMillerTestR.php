@@ -127,7 +127,7 @@ class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
         );
 
         $totalTime = 0;
-        $iterations = 1000;
+        $iterations = 10000;
         for( $n = 0; $n < $iterations; $n++ ){
             $uuid = uniqid();
             $replicaData = array();
@@ -149,7 +149,7 @@ class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
             $this->assertEquals( count($replicaData), $replicaCount, print_r(array("replica urls are not all unique!", $uuid, $replicaData, $replicaNodes ),1));
 
         }
-        echo("totalTime: $totalTime\navg time:".($totalTime/($replicaCount * $iterations)));
+        echo("totalTime: $totalTime\navg time per lookup:".($totalTime/($replicaCount * $iterations)));
     }
 
     public function makeConfig($numClusters = 1, $numNodes = 1, $replicationDegree = 1, $clusterToWeight = 0, $weight = 1){

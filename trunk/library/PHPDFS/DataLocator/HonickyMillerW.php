@@ -207,7 +207,7 @@ class PHPDFS_DataLocator_HonickyMillerW
                 // we need the relative position of the node within the cluster
                 // so we take the modulus of the absnode %
                 // this way we can reach into our data config and get the object and return it
-                $relNode = $currentCluster ? ( $absNode % $currentCluster ) : $absNode;
+                $relNode = $currentCluster ? ( $absNode % $currentCluster + 1 ) : $absNode;
                 $nodeInfo = $clusterData['nodes'][$relNode];
             }
 
