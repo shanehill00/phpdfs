@@ -165,12 +165,6 @@ class PHPDFS
 
     /**
      *
-     * @var <PHPDFS_Client>
-     */
-    protected $client;
-
-    /**
-     *
      * @param <type> $locator
      * @param <type> $config
      * @param <type> $params
@@ -180,9 +174,6 @@ class PHPDFS
         
         require_once( $config['locatorClassPath'] );
         $locatorClassName = $config['locatorClassName'];
-
-        require_once('PHPDFS/Client.php');
-        $this->client = new PHPDFS_Client();
 
         $this->locator = new $locatorClassName( $config );
 

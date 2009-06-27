@@ -77,7 +77,7 @@ class PHPDFS_Client{
     public function get( $fileId ){
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
-            $url = join('/', array($paths[0]['url'],$fileId ) );
+            $url = $paths[0]['url'];
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_TIMEOUT, 10);
             curl_setopt($curl, CURLOPT_HEADER, false);
@@ -104,8 +104,8 @@ class PHPDFS_Client{
      */
     public function delete( $fileId ){
         $paths = $this->getPaths($fileId);
+        $url = $paths[0]['url'];
         if( count( $paths ) ) {
-            $url = join('/', array($paths[0]['url'],$fileId ) );
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_TIMEOUT, 10);
             curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
@@ -135,7 +135,7 @@ class PHPDFS_Client{
     public function set( $fileId, $filePath ){
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
-            $url = join('/', array($paths[0]['url'],$fileId ) );
+            $url = $paths[0]['url'];
             $fh = fopen($filePath, "rb");
             $size = filesize( $filePath );
             rewind($fh);
