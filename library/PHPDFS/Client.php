@@ -69,6 +69,11 @@ class PHPDFS_Client{
         );
     }
 
+    /**
+     * @param <string> $fileId
+     *
+     * @throws PHPDFS_Client_GetException
+     */
     public function get( $fileId ){
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
@@ -92,6 +97,11 @@ class PHPDFS_Client{
         return $paths;
     }
 
+    /**
+     *
+     * @param <string> $fileId
+     * @throws PHPDFS_Client_GetException
+     */
     public function delete( $fileId ){
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
@@ -106,10 +116,22 @@ class PHPDFS_Client{
         }
     }
 
+    /**
+     * @param <string> $fileId
+     * @param <string> $filePath
+     *
+     * @throws PHPDFS_Client_PutException
+     */
     public function put( $fileId, $filePath ){
         $this->set( $fileId, $filePath );
     }
 
+    /**
+     * @param <string> $fileId
+     * @param <string> $filePath
+     *
+     * @throws PHPDFS_Client_PutException
+     */
     public function set( $fileId, $filePath ){
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
