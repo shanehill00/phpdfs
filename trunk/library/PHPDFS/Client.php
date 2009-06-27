@@ -81,12 +81,16 @@ class PHPDFS_Client{
         }
     }
 
-    public function set( $fileId, $from ){
+    public function put( $fileId, $filePath ){
+        $this->set( $fileId, $filePath );
+    }
+
+    public function set( $fileId, $filePath ){
         $paths = $this->getPaths($fileId);
         if( count( $paths ) ) {
             $url = join('/', array($paths[0]['url'],$fileId ) );
-            $fh = fopen($from, "r");
-            $size = filesize( $from );
+            $fh = fopen($filePath, "r");
+            $size = filesize( $filePath );
             rewind($fh);
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_INFILE, $fh);
