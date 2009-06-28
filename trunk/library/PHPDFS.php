@@ -232,28 +232,44 @@ class PHPDFS
         }
     }
 
+// int $errno  , string $errstr  [, string $errfile  [, int $errline  [, array $errcontext  ]]]
+    protected function handlePutError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        $e = new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw $e;
+    }
+
     public function putData(){
-        // get the data from stdin and put it in a temp file
-        // we will disconnect the client at this point if we are configured to do so
-        // otherwise we hang on to the client, which in most cases is really bad
-        // because you might stay connected until the replication chain is completed
-        $this->spoolData( );
+        // try to spool the data,  if we cannot spool or we fail for some other reason
+        // we want to continue with the forward so we will not break the replication chain.
+        // to this catch all warnings and errors in php, then we
+        // send a 500 back to the client and we log the error to STDERR.
+        set_error_handler( array( $this, "handlePutError") );
+        try{
+            // get the data from stdin and put it in a temp file
+            // we will disconnect the client at this point if we are configured to do so
+            // otherwise we hang on to the client, which in most cases is really bad
+            // because you might stay connected until the replication chain is completed
+            $this->spoolData( );
 
-        // save the data to the appropriate directory and remove the spooled file
-        // but only if we are a targetNode, otherwise DO NOTHING
-        $this->saveData( );
-
-        // forward the data on to the next node
-        // the reasons for forwarding are:
-        //
-        // we are NOT a targetNode and are just the first node
-        // to receive the upload, so we forward the data to the first targetNode
-        // and remove the spooled file
-        //
-        // OR we are a targetNode and need to fulfill the replication requirements
-        // so, we forward data to the next targetNode in our list.
-        // however, if we are the last replication targetNode, we DO NOTHING.
-        $this->forwardData( );
+            // save the data to the appropriate directory and remove the spooled file
+            // but only if we are a targetNode, otherwise DO NOTHING
+            $this->saveData( );
+            // forward the data on to the next node
+            // the reasons for forwarding are:
+            //
+            // we are NOT a targetNode and are just the first node
+            // to receive the upload, so we forward the data to the first targetNode
+            // and remove the spooled file
+            //
+            // OR we are a targetNode and need to fulfill the replication requirements
+            // so, we forward data to the next targetNode in our list.
+            // however, if we are the last replication targetNode, we DO NOTHING.
+            $this->forwardData( );
+        } catch( PHPDFS_PutException $e ){
+            error_log($e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500("error when processing upload!");
+        }
+        restore_error_handler();
     }
 
     public function deleteData(){
@@ -261,23 +277,46 @@ class PHPDFS
         $this->forwardDelete();
     }
 
+    /*
+     * get the data from stdin and put it in a temp file
+     * we will disconnect the client at this point if we are configured to do so
+     * otherwise we hang on to the client, which in most cases is really bad
+     * because you might stay connected until the replication chain is completed.
+     * (depending on how the other nodes are configured of course)
+     *
+     * @param <boolean> $disconnect
+     *
+     * @throws PHPDFS_PutException
+     */
     public function spoolData( $disconnect = false ){
 
         // write stdin to a temp file
         $tmpFH = fopen($this->tmpPath, "w");
         $putData = fopen("php://input", "r");
+        if( $tmpFH && $putData ){
 
-        while ($data = fread($putData, 1024))
-          fwrite($tmpFH, $data);
+            while ($data = fread($putData, 1024))
+              fwrite($tmpFH, $data);
 
-        fclose($tmpFH);
-        fclose($putData);
+            fclose($tmpFH);
+            fclose($putData);
 
-        if( isset( $this->config['disconnectAfterSpooling'] ) && $this->config['disconnectAfterSpooling'] ){
-            PHPDFS_Helper::disconnectClient();
+            if( isset( $this->config['disconnectAfterSpooling'] ) && $this->config['disconnectAfterSpooling'] ){
+                PHPDFS_Helper::disconnectClient();
+            }
+        } else {
+            throw new PHPDFS_PutException("problem when PUTting ".$this->params['name']);
         }
     }
 
+    /**
+     * this wher we unlink the file from the fs
+     * we want to prevent the errors from
+     * killing the process here as we might
+     * receive erroneous delete requests and it
+     * does not seem like we should die because of those
+     *
+     */
     protected function _deleteData( ){
         if(  $this->iAmATarget( ) && file_exists( $this->finalPath ) ){
             $deleted = unlink( $this->finalPath );
