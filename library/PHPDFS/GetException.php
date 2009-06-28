@@ -31,4 +31,4 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @author Shane Hill <shanehill00@gmail.com>
  */
 
-class PHPDFS_Client_PutException extends Exception {   }
+class PHPDFS_GetException extends Exception {   }

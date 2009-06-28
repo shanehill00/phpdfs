@@ -66,6 +66,13 @@ class PHPDFS_Helper {
         session_write_close();
     }
     
+    public static function send500( $msg ) {
+        header(  $_SERVER['SERVER_PROTOCOL'].' 500 Internal Server Error' );
+        header("Content-Length: ".strlen($msg));
+        echo($msg);
+        session_write_close();
+    }
+
     public static function send301( $url ) {
         header(  $_SERVER['SERVER_PROTOCOL'].' 301 Moved Permanently' );
         header('Location: '.$url);

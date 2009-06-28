@@ -54,17 +54,17 @@ class PHPDFS_Client{
             self::PHPDFS_PUT_ERR => array(
                 'class' => 'PHPDFS_Client_PutException',
                 'msg'   => 'PUT Exception',
-                'require_once' => 'PHPDFS/Client/PutException.php'
+                'require_once' => 'PHPDFS/PutException.php'
             ),
             self::PHPDFS_DELETE_ERR => array(
                 'class' => 'PHPDFS_Client_DeleteException',
                 'msg'   => 'DELETE Exception',
-                'require_once' => 'PHPDFS/Client/DeleteException.php'
+                'require_once' => 'PHPDFS/DeleteException.php'
             ),
             self::PHPDFS_GET_ERR => array(
                 'class' => 'PHPDFS_Client_GetException',
                 'msg'   => 'GET Exception',
-                'require_once' => 'PHPDFS/Client/GetException.php'
+                'require_once' => 'PHPDFS/GetException.php'
             ),
         );
     }

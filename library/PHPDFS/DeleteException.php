@@ -31,4 +31,4 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @author Shane Hill <shanehill00@gmail.com>
  */
 
-class PHPDFS_Client_DeleteException extends Exception {   }
+class PHPDFS_DeleteException extends Exception {   }
