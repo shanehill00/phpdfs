@@ -30,12 +30,20 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 require_once 'PHPDFS/Client.php';
 require_once 'PHPDFS/Helper.php';
 
+ini_set('upload_max_filesize', '50m');
+ini_set('post_max_size', '50m');
+
 if( isset($_FILES['datafile']['tmp_name'])){
     $filepath = $_FILES['datafile']['tmp_name'];
     $name = $_POST['name'];
     $config = PHPDFS_Helper::getConfig();
     $phpdfsc = new PHPDFS_Client( $config );
     $phpdfsc->set($name, $filepath);
-    print_r(array( $phpdfsc->getPaths( $name ) ) );
+    $paths = $phpdfsc->getPaths( $name );
+    foreach( $paths as $path ){
+        $url = $path['url'];
+        echo("<a href='$url'>$url</a><br>");
+
+    }
 }
 

@@ -91,6 +91,9 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 require_once 'PHPDFS/Helper.php';
+require_once 'PHPDFS/PutException.php';
+require_once 'PHPDFS/DeleteException.php';
+require_once 'PHPDFS/GetException.php';
 
 class PHPDFS
 {
@@ -232,10 +235,12 @@ class PHPDFS
         }
     }
 
-// int $errno  , string $errstr  [, string $errfile  [, int $errline  [, array $errcontext  ]]]
-    protected function handlePutError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        $e = new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
-        throw $e;
+    protected function handleSpoolError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+    }
+
+    protected function handleForwardDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
 
     public function putData(){
@@ -243,7 +248,8 @@ class PHPDFS
         // we want to continue with the forward so we will not break the replication chain.
         // to this catch all warnings and errors in php, then we
         // send a 500 back to the client and we log the error to STDERR.
-        set_error_handler( array( $this, "handlePutError") );
+        $error500Msg = "error when processing upload";
+        set_error_handler( array( $this, "handleSpoolError") );
         try{
             // get the data from stdin and put it in a temp file
             // we will disconnect the client at this point if we are configured to do so
@@ -254,27 +260,60 @@ class PHPDFS
             // save the data to the appropriate directory and remove the spooled file
             // but only if we are a targetNode, otherwise DO NOTHING
             $this->saveData( );
-            // forward the data on to the next node
-            // the reasons for forwarding are:
-            //
-            // we are NOT a targetNode and are just the first node
-            // to receive the upload, so we forward the data to the first targetNode
-            // and remove the spooled file
-            //
-            // OR we are a targetNode and need to fulfill the replication requirements
-            // so, we forward data to the next targetNode in our list.
-            // however, if we are the last replication targetNode, we DO NOTHING.
+        } catch( PHPDFS_PutException $e ){
+            error_log("error while spooling data".$e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500($error500Msg);
+        }
+        restore_error_handler();
+
+        // forward the data on to the next node
+        // the reasons for forwarding are:
+        //
+        // we are NOT a targetNode and are just the first node
+        // to receive the upload, so we forward the data to the first targetNode
+        // and remove the spooled file
+        //
+        // OR we are a targetNode and need to fulfill the replication requirements
+        // so, we forward data to the next targetNode in our list.
+        // however, if we are the last replication targetNode, we DO NOTHING.
+        set_error_handler( array( $this, "handleForwardDataError") );
+        try{
             $this->forwardData( );
         } catch( PHPDFS_PutException $e ){
-            error_log($e->getMessage().' : '.$e->getTraceAsString() );
-            PHPDFS_Helper::send500("error when processing upload!");
+            error_log(" error while forwarding data" .$e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500($error500Msg);
         }
         restore_error_handler();
     }
 
+    protected function handleDeleteDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        throw new PHPDFS_DeleteException( " $errno : $errmsg : $errfile : $errline " );
+    }
+    
+    protected function handleForwardDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        throw new PHPDFS_DeleteException( " $errno : $errmsg : $errfile : $errline " );
+    }
+
     public function deleteData(){
-        $this->_deleteData( );
-        $this->forwardDelete();
+        $error500Msg = "error when processing delete command";
+        set_error_handler( array( $this, "handleDeleteDataError") );
+        try{
+            $this->_deleteData( );
+        } catch( PHPDFS_DeleteException $e ){
+            error_log(" error while deleting data" .$e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500($error500Msg);
+        }
+        restore_error_handler();
+
+
+        set_error_handler( array( $this, "handleForwardDeleteError") );
+        try{
+            $this->forwardDelete();
+        } catch( PHPDFS_DeleteException $e ){
+            error_log(" error while forwarding the delete action " .$e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500($error500Msg);
+        }
+        restore_error_handler();
     }
 
     /*
@@ -288,7 +327,7 @@ class PHPDFS
      *
      * @throws PHPDFS_PutException
      */
-    public function spoolData( $disconnect = false ){
+    protected function spoolData( $disconnect = false ){
 
         // write stdin to a temp file
         $tmpFH = fopen($this->tmpPath, "w");
@@ -305,7 +344,7 @@ class PHPDFS
                 PHPDFS_Helper::disconnectClient();
             }
         } else {
-            throw new PHPDFS_PutException("problem when PUTting ".$this->params['name']);
+            throw new PHPDFS_PutException("problem when spooling ".$this->params['name']);
         }
     }
 
@@ -321,27 +360,30 @@ class PHPDFS
         if(  $this->iAmATarget( ) && file_exists( $this->finalPath ) ){
             $deleted = unlink( $this->finalPath );
             if( !$deleted ){
-                // throw exception if the copy failed
-                throw new Exception("could not unlink ".$this->finalPath);
+                // throw exception if the delete failed
+                throw new PHPDFS_PutException("could not unlink ".$this->finalPath);
             }
         }
     }
 
-    public function saveData( ){
+    protected function saveData( ){
         if(  $this->iAmATarget( ) ){
 
-            $copied = copy($this->tmpPath, $this->finalPath);
-
-            if( !$copied ){
+            if(  !copy($this->tmpPath, $this->finalPath) ){
                 // throw exception if the copy failed
                 throw new Exception("final copy operation failed");
             }
 
-            unlink( $this->tmpPath );
+            $deleted = unlink( $this->tmpPath );
+            if( !$deleted ){
+                // throw exception if the copy failed
+                throw new PHPDFS_PutException("could not unlink ".$this->tmpPath);
+            }
         }
     }
 
-    protected function forwardDelete( ){
+    protected function getForwardUrl( $filename, $replica, $replicationDegree, $position ){
+        $url = null;
         $targetNodes = $this->getTargetNodes();
         if( $this->iAmATarget() ){
             // check whether or not we are done replicating.
@@ -351,61 +393,66 @@ class PHPDFS
             // if the replica number value is less than the max replicas minus 1
             // if yes, that means we need to continue to replicate
             // if not, that means we are done replicating and can quietly return
-            $replica = (int) $this->params['replica'];
-            $replicationDegree = (int) $this->config['replicationDegree'];
             if( $replica < ( $replicationDegree - 1 ) ) {
-
-                $position = $this->params['position'];
-                if( !is_numeric( $position ) ){
-                    $position = $this->getNodePosition( );
-                }
                 $replica++;
                 $position++;
                 // resolve the array index for our position in the list of targetNodes
                 $position %= count( $targetNodes );
 
-                $url = join("/", array( $targetNodes[$position]['proxyUrl'], $this->params['name'], $replica, $position ) );
-                $this->sendDelete( $url );
+                $url = join("/", array( $targetNodes[$position]['proxyUrl'], $filename, $replica, $position ) );
             }
         } else {
-            $url = join('/', array($targetNodes[0]['proxyUrl'],$this->params['name'] ) );
-            $this->sendDelete( $url );
+            $url = join('/', array($targetNodes[0]['proxyUrl'],$filename ) );
+        }
+        return $url;
+    }
+
+    protected function forwardDelete( ){
+        
+        $filename = $this->params['name'];
+        $replicaNo = (int) $this->params['replica'];
+        $replicationDegree = (int) $this->config['replicationDegree'];
+        $position = $this->params['position'];
+        if( !is_numeric( $position ) ){
+            $position = $this->getNodePosition( );
+        }
+
+        $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
+        if( $forwardUrl ){
+            $this->sendDelete($forwardUrl, $filename, $replicaNo, $replicationDegree, $position);
         }
     }
 
     /**
+     * forward the data on to the next node
+     * the reasons for forwarding are:
      *
-     */
+     * we are NOT a targetNode and are just the first node
+     * to receive the upload, so we forward the data to the first targetNode
+     * and remove the spooled file
+     *
+     * OR we are a targetNode and need to fulfill the replication requirements
+     * so, we forward data to the next targetNode in our list.
+     * however, if we are the last replication targetNode, we DO NOTHING.
+    */
     protected function forwardData( ){
-        $targetNodes = $this->getTargetNodes();
-        if( $this->iAmATarget() ){
-            // check whether or not we are done replicating.
-            //
-            // replicas are identified by the replica number.
-            // replica numbers start at 0, so we check to see
-            // if the replica number value is less than the max replicas minus 1
-            // if yes, that means we need to continue to replicate
-            // if not, that means we are done replicating and can quietly return
-            $replica = (int) $this->params['replica'];
-            $replicationDegree = (int) $this->config['replicationDegree'];
-            if( $replica < ( $replicationDegree - 1 ) ) {
 
-                $position = $this->params['position'];
-                if( !is_numeric( $position ) ){
-                    $position = $this->getNodePosition( );
-                }
-                $replica++;
-                $position++;
-                // resolve the array index for our position
-                $position %= count( $targetNodes );
+        $filename = $this->params['name'];
+        $replicaNo = (int) $this->params['replica'];
+        $replicationDegree = (int) $this->config['replicationDegree'];
+        $position = $this->params['position'];
+        if( !is_numeric( $position ) ){
+            $position = $this->getNodePosition( );
+        }
 
-                $url = join("/", array( $targetNodes[$position]['proxyUrl'], $this->params['name'], $replica, $position ) );
-                $this->sendData( $this->finalPath, $url );
+        $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
+        if( $forwardUrl ){
+            if( $this->iAmATarget() ){
+                $this->sendData($this->finalPath, $forwardUrl, $filename, $replicaNo, $replicationDegree, $position);
+            } else {
+                $this->sendData($this->tmpPath, $forwardUrl, $filename, $replicaNo, $replicationDegree, $position );
+                unlink( $this->tmpPath );
             }
-        } else {
-            $url = join('/', array($targetNodes[0]['proxyUrl'],$this->params['name'] ) );
-            $this->sendData( $this->tmpPath, $url );
-            unlink( $this->tmpPath );
         }
     }
 
@@ -416,7 +463,24 @@ class PHPDFS
         return $this->targetNodes;
     }
 
-    protected function sendDelete( $url ){
+    /**
+     *
+     * potentially recursive function calls will occur here if for some reason
+     * we do not successfully propagate an action to the next node
+     *
+     * we will only recurse until we see that the position number we are currently
+     * recursing with is the same as the position number with which we started.
+     * if the two position values are equal then that means we have cycled on the
+     * whole node list and we should not continue.  with each recursion we log an error
+     * before moving on to the next node in the list
+     * 
+     * @param <type> $url
+     * @param <type> $filename
+     * @param <type> $replicaNo
+     * @param <type> $replicationDegree
+     * @param <type> $position
+     */
+    protected function sendDelete( $url, $filename, $replicaNo, $replicationDegree, $position ){
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
@@ -425,7 +489,24 @@ class PHPDFS
         $response = curl_exec($ch);
     }
 
-    protected function sendData( $from, $url ){
+    /**
+     * potentially recursive function calls will occur here if for some reason
+     * we do not successfully propagate an action to the next node
+     *
+     * we will only recurse until we see that the position number we are currently
+     * recursing with is the same as the position number with which we started.
+     * if the two position values are equal then that means we have cycled on the
+     * whole node list and we should not continue.  with each recursion we log an error
+     * before moving on to the next node in the list
+     *
+     * @param <type> $from
+     * @param <type> $url
+     * @param <type> $filename
+     * @param <type> $replicaNo
+     * @param <type> $replicationDegree
+     * @param <type> $position
+     */
+    protected function sendData( $from, $url, $filename, $replicaNo, $replicationDegree, $position ){
         $fh = fopen($from, "r");
         $size = filesize( $from );
         rewind($fh);
