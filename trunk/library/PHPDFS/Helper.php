@@ -29,6 +29,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class PHPDFS_Helper {
 
+
+
     public static function getConfig( $name = "cluster_config.php" ){
         return require $name;
     }
@@ -56,7 +58,7 @@ class PHPDFS_Helper {
 
     public static function disconnectClient() {
         // use a 204 no content header
-        header( "HTTP/1.1 204 No Content" ) ;
+        header( $_SERVER['SERVER_PROTOCOL']." 204 No Content" ) ;
         if( ob_get_length() ){
             ob_end_clean();
         }
@@ -64,10 +66,16 @@ class PHPDFS_Helper {
         session_write_close();
     }
     
+    public static function send301( $url ) {
+        header(  $_SERVER['SERVER_PROTOCOL'].' 301 Moved Permanently' );
+        header('Location: '.$url);
+        header('Content-Length: 0');
+        session_write_close();
+    }
+    
     public static function send404( $path = "" ) {
-        // use a 204 no response header
         $msg = "cannot find $path";
-        header( "HTTP/1.1 404 Not Found" ) ;
+        header(  $_SERVER['SERVER_PROTOCOL']." 404 Not Found" ) ;
         header("Content-Length: ".strlen($msg));
         echo($msg);
         session_write_close();

@@ -195,24 +195,39 @@ class PHPDFS
         }
     }
 
+    /**
+     * need to add a param to indicate that we want to continue looking for the data
+     * if we are not actually a target node.  logically, any client directly
+     * asking for data should be able to locate the exact nodes from which
+     * to ask.  So this really should not happen very often (unles someone os making lots of bad requests)
+     * and might even be indicative a problem.  we do not really have a way to tell if it denotes a prob or not
+     *
+     * what we do need is a check to be sure that we are not a target anyway so we can throw an error
+     * if the data is supposed to be here. ah but wait we might not have the data
+     */
     public function getData(){
-        if( file_exists( $this->finalPath) ){
-            $dataFH = fopen( $this->finalPath, "rb");
+        $finalPath = $this->finalPath;
+        $config = $this->config;
+        if( file_exists( $finalPath) ){
+            $dataFH = fopen( $finalPath, "rb" );
 
-            $finfo = finfo_open(FILEINFO_MIME, $this->config["magicDbPath"] );
-            $contentType = finfo_file($finfo, $this->finalPath );
+            $finfo = finfo_open( FILEINFO_MIME, $config["magicDbPath"] );
+            $contentType = finfo_file( $finfo, $finalPath );
             finfo_close( $finfo );
 
-            //echo($contentType."\n");
-            //exit();
+            header( "Content-Type: $contentType");
+            header( "Content-Length: ".filesize( $finalPath ) );
+            fpassthru( $dataFH );
 
-            header("Content-Type: $contentType");
-            header("Content-Length: ".filesize( $this->finalPath ));
-            fpassthru($dataFH);
-
-            fclose($dataFH);
-        } else {
-            $notFound = str_replace($this->config['storageRoot'], "", $this->finalPath);
+            fclose( $dataFH );
+        } else if( !$this->iAmATarget() ){
+            // get the paths, chhose one, and print a 302 redirect
+            $nodes = $this->getTargetNodes();
+            if( $nodes ){
+                PHPDFS_Helper::send301( $nodes[0]['proxyUrl'].'/'.$this->params['name'] );
+            }
+        } else{
+            $notFound = str_replace( $config['storageRoot'], "", $finalPath );
             PHPDFS_Helper::send404( $notFound );
         }
     }
