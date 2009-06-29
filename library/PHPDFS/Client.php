@@ -70,12 +70,16 @@ class PHPDFS_Client{
     }
 
     /**
+     * fetches the entity and returns a ref to it
+     *
+     *
      * @param <string> $fileId
      *
      * @throws PHPDFS_Client_GetException
      */
-    public function get( $fileId ){
+    public function &get( $fileId ){
         $paths = $this->getPaths($fileId);
+        $response = "";
         if( count( $paths ) ) {
             $url = $paths[0]['url'];
             $curl = curl_init();
@@ -83,9 +87,12 @@ class PHPDFS_Client{
             curl_setopt($curl, CURLOPT_HEADER, false);
             curl_setopt($curl, CURLOPT_URL, $url);
             curl_setopt($curl, CURLOPT_BINARYTRANSFER, true);
-            curl_exec($curl);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+            $response = curl_exec($curl);
             $this->checkError( $curl, self::PHPDFS_GET_ERR );
         }
+        return $response;
     }
 
     public function getPaths( $fileId ){

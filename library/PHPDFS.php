@@ -422,7 +422,7 @@ class PHPDFS
         $replicationDegree = (int) $this->config['replicationDegree'];
         $position = $this->params['position'];
         if( !is_numeric( $position ) ){
-            $position = $this->getPositionByUrl( );
+            $position = $this->getTargetNodePosition( );
         }
 
         $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
@@ -450,7 +450,7 @@ class PHPDFS
         $replicationDegree = (int) $this->config['replicationDegree'];
         $position = $this->params['position'];
         if( !is_numeric( $position ) ){
-            $position = $this->getPositionByUrl( );
+            $position = $this->getTargetNodePosition( );
         }
 
         $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
@@ -475,7 +475,7 @@ class PHPDFS
         return $this->targetNodes;
     }
 
-    protected function getPositionByUrl( $url = null ){
+    protected function getTargetNodePosition( $url = null ){
         $name = $this->params['name'];
         if( !$url ){
             $url = join('/',array( $this->config['thisProxyUrl'], $name ) );
@@ -515,7 +515,7 @@ class PHPDFS
         $errNo = 0;
         $nodes = $this->getTargetNodes();
         $numTargetNodes = count( $nodes );
-        $nextPosition = $position = $this->getPositionByUrl($url);
+        $nextPosition = $position = $this->getTargetNodePosition($url);
         $attempt = 0;
         do{
             $attempt++;
@@ -561,7 +561,7 @@ class PHPDFS
         $errNo = 0;
         $nodes = $this->getTargetNodes();
         $numTargetNodes = count( $nodes );
-        $nextPosition = $position = $this->getPositionByUrl($url);
+        $nextPosition = $position = $this->getTargetNodePosition($url);
         $attempt = 0;
         do{
             $attempt++;
@@ -587,7 +587,7 @@ class PHPDFS
 
     public function iAmATarget( ){
         $isTarget = false;
-        $targetPos = $this->getPositionByUrl( );
+        $targetPos = $this->getTargetNodePosition( );
         if( is_numeric( $targetPos ) && $targetPos > self::NO_TARGET_POSITION ){
             $isTarget = true;
         } else {
