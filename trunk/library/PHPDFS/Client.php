@@ -159,7 +159,7 @@ class PHPDFS_Client{
         }
     }
 
-    protected function checkError( $curl, $phpDfsErrCode, $additionalInfo ){
+    protected function checkError( $curl, $phpDfsErrCode, $additionalInfo = "" ){
         if( curl_errno($curl) ){
             $errInfo = $this->errs[ $phpDfsErrCode ];
             require_once( $errInfo['require_once'] );
