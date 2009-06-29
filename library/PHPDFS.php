@@ -458,9 +458,8 @@ class PHPDFS
     }
 
     protected function getTargetNodePosition( $url = null ){
-        $name = $this->params['name'];
         if( !$url ){
-            $url = join('/',array( $this->config['thisProxyUrl'], $name ) );
+            $url = $this->config['thisProxyUrl'];
         }
         if( !$this->positionByUrl ){
             // we also build the mapping between the url and the position
@@ -469,8 +468,7 @@ class PHPDFS
             $position = 0;
             $nodes = $this->getTargetNodes();
             foreach( $nodes as $node ){
-                $posUrl = join('/', array( $node['proxyUrl'], $name ) );
-                $this->positionByUrl[ $posUrl ] = $position++;
+                $this->positionByUrl[ $node['proxyUrl'] ] = $position++;
             }
         }
         return isset( $this->positionByUrl[ $url ] ) 
