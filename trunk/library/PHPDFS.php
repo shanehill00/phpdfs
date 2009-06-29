@@ -386,10 +386,12 @@ class PHPDFS
         }
     }
 
-    protected function getForwardUrl( $filename, $replica, $replicationDegree, $position ){
+    protected function getForwardUrl( $replica, $position ){
         $url = null;
         $targetNodes = $this->getTargetNodes();
+        $filename = $this->params['name'];
         if( $this->iAmATarget() ){
+            $replicationDegree = $this->config['replicationDegree'];
             // check whether or not we are done replicating.
             //
             // replicas are identified by the replica number.
@@ -417,17 +419,15 @@ class PHPDFS
 
     protected function forwardDelete( ){
         
-        $filename = $this->params['name'];
         $replicaNo = (int) $this->params['replica'];
-        $replicationDegree = (int) $this->config['replicationDegree'];
         $position = $this->params['position'];
         if( !is_numeric( $position ) ){
             $position = $this->getTargetNodePosition( );
         }
 
-        $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
+        $forwardUrl = $this->getForwardUrl($replicaNo, $position);
         if( $forwardUrl ){
-            $this->sendDelete($forwardUrl, $filename, $replicaNo, $replicationDegree, $position);
+            $this->sendDelete($forwardUrl, $replicaNo, $position);
         }
     }
 
@@ -453,16 +453,16 @@ class PHPDFS
             $position = $this->getTargetNodePosition( );
         }
 
-        $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
+        $forwardUrl = $this->getForwardUrl( $replicaNo, $position);
         if( $forwardUrl ){
             if( $this->iAmATarget() ){
-                $this->sendData($this->finalPath, $forwardUrl, $filename, $replicaNo, $replicationDegree, $position);
+                $this->sendData($this->finalPath, $forwardUrl, $replicaNo, $position);
             } else {
                 // our node position is negative 1 here.  node position meaning the place we hold in the target node list
                 // and since we are in this block of code our position is -1 and we are not a target node
                 // since our position os -1 we need to get the position of the url to whcih we are redircting
                 // and pass that to sendData() so send data can do its thing correctly
-                $this->sendData($this->tmpPath, $forwardUrl, $filename, $replicaNo, $replicationDegree, $position );
+                $this->sendData($this->tmpPath, $forwardUrl, $replicaNo, $position );
                 unlink( $this->tmpPath );
             }
         }
@@ -510,7 +510,7 @@ class PHPDFS
      * @param <type> $replicationDegree
      * @param <type> $position
      */
-    protected function sendDelete( $url, $filename, $replicaNo, $replicationDegree, $position ){
+    protected function sendDelete( $url, $replicaNo, $position ){
         $ch = curl_init();
         $errNo = 0;
         $nodes = $this->getTargetNodes();
@@ -530,7 +530,7 @@ class PHPDFS
                 $replicaNo++;
                 $nextPosition++;
                 $nextPosition %= $numTargetNodes;
-                $url = $this->getForwardUrl( $filename, $replicaNo, $replicationDegree, $nextPosition );
+                $url = $this->getForwardUrl( $replicaNo, $nextPosition );
             }
         } while( $errNo && $position != $nextPosition && $url );
     }
@@ -552,7 +552,7 @@ class PHPDFS
      * @param <type> $replicationDegree
      * @param <type> $position
      */
-    protected function sendData( $filePath, $url, $filename, $replicaNo, $replicationDegree, $position ){
+    protected function sendData( $filePath, $url, $replicaNo, $position ){
         $fh = fopen($filePath, "rb");
         $size = filesize( $filePath );
         rewind($fh);
@@ -578,7 +578,7 @@ class PHPDFS
                 $replicaNo++;
                 $nextPosition++;
                 $nextPosition %= $numTargetNodes;
-                $url = $this->getForwardUrl( $filename, $replicaNo, $replicationDegree, $nextPosition );
+                $url = $this->getForwardUrl( $replicaNo, $nextPosition );
             }
         } while( $errNo && $position != $nextPosition && $url );
 
