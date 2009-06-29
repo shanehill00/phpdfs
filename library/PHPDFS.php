@@ -148,6 +148,15 @@ class PHPDFS
     protected $targetNodes = null;
 
     /**
+     * an assoc array keyed of of proxy url where the value
+     * of each element is the position of the proxyUrl
+     * in the target node list
+     * 
+     * @var <array>
+     */
+    protected $positionByUrl = null;
+
+    /**
      * int indicating which position
      * this node is in in he target node list
      *
@@ -244,10 +253,6 @@ class PHPDFS
     }
 
     public function putData(){
-        // try to spool the data,  if we cannot spool or we fail for some other reason
-        // we want to continue with the forward so we will not break the replication chain.
-        // to this catch all warnings and errors in php, then we
-        // send a 500 back to the client and we log the error to STDERR.
         $error500Msg = "error when processing upload";
         set_error_handler( array( $this, "handleSpoolError") );
         try{
@@ -263,6 +268,9 @@ class PHPDFS
         } catch( PHPDFS_PutException $e ){
             error_log("error while spooling data".$e->getMessage().' : '.$e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
+            // we want to be sure to exit here because we have errored
+            // and the state of the file upload is unknown
+            exit();
         }
         restore_error_handler();
 
@@ -332,19 +340,15 @@ class PHPDFS
         // write stdin to a temp file
         $tmpFH = fopen($this->tmpPath, "w");
         $putData = fopen("php://input", "r");
-        if( $tmpFH && $putData ){
 
-            while ($data = fread($putData, 1024))
-              fwrite($tmpFH, $data);
+        while ($data = fread($putData, 1024))
+          fwrite($tmpFH, $data);
 
-            fclose($tmpFH);
-            fclose($putData);
+        fclose($tmpFH);
+        fclose($putData);
 
-            if( isset( $this->config['disconnectAfterSpooling'] ) && $this->config['disconnectAfterSpooling'] ){
-                PHPDFS_Helper::disconnectClient();
-            }
-        } else {
-            throw new PHPDFS_PutException("problem when spooling ".$this->params['name']);
+        if( isset( $this->config['disconnectAfterSpooling'] ) && $this->config['disconnectAfterSpooling'] ){
+            PHPDFS_Helper::disconnectClient();
         }
     }
 
@@ -402,7 +406,11 @@ class PHPDFS
                 $url = join("/", array( $targetNodes[$position]['proxyUrl'], $filename, $replica, $position ) );
             }
         } else {
-            $url = join('/', array($targetNodes[0]['proxyUrl'],$filename ) );
+            if( $position == self::NO_TARGET_POSITION ){
+                srand();
+                $position = rand(0, (count($targetNodes)-1) );
+            }
+            $url = join('/', array($targetNodes[$position]['proxyUrl'],$filename ) );
         }
         return $url;
     }
@@ -414,7 +422,7 @@ class PHPDFS
         $replicationDegree = (int) $this->config['replicationDegree'];
         $position = $this->params['position'];
         if( !is_numeric( $position ) ){
-            $position = $this->getNodePosition( );
+            $position = $this->getPositionByUrl( );
         }
 
         $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
@@ -442,7 +450,7 @@ class PHPDFS
         $replicationDegree = (int) $this->config['replicationDegree'];
         $position = $this->params['position'];
         if( !is_numeric( $position ) ){
-            $position = $this->getNodePosition( );
+            $position = $this->getPositionByUrl( );
         }
 
         $forwardUrl = $this->getForwardUrl($filename, $replicaNo, $replicationDegree, $position);
@@ -450,6 +458,10 @@ class PHPDFS
             if( $this->iAmATarget() ){
                 $this->sendData($this->finalPath, $forwardUrl, $filename, $replicaNo, $replicationDegree, $position);
             } else {
+                // our node position is negative 1 here.  node position meaning the place we hold in the target node list
+                // and since we are in this block of code our position is -1 and we are not a target node
+                // since our position os -1 we need to get the position of the url to whcih we are redircting
+                // and pass that to sendData() so send data can do its thing correctly
                 $this->sendData($this->tmpPath, $forwardUrl, $filename, $replicaNo, $replicationDegree, $position );
                 unlink( $this->tmpPath );
             }
@@ -463,15 +475,33 @@ class PHPDFS
         return $this->targetNodes;
     }
 
+    protected function getPositionByUrl( $url = null ){
+        $name = $this->params['name'];
+        if( !$url ){
+            $url = join('/',array( $this->config['thisProxyUrl'], $name ) );
+        }
+        if( !$this->positionByUrl ){
+            // we also build the mapping between the url and the position
+            // so we can easily look up position by proxy url
+            $this->positionByUrl= array();
+            $position = 0;
+            $nodes = $this->getTargetNodes();
+            foreach( $nodes as $node ){
+                $posUrl = join('/', array( $node['proxyUrl'], $name ) );
+                $this->positionByUrl[ $posUrl ] = $position++;
+            }
+        }
+        return isset( $this->positionByUrl[ $url ] ) 
+                ? $this->positionByUrl[ $url ]
+                : self::NO_TARGET_POSITION;
+    }
+
     /**
      *
-     * potentially recursive function calls will occur here if for some reason
-     * we do not successfully propagate an action to the next node
-     *
-     * we will only recurse until we see that the position number we are currently
-     * recursing with is the same as the position number with which we started.
+     * we will only loop until we see that the position number we are currently
+     * looping with is the same as the position number with which we started.
      * if the two position values are equal then that means we have cycled on the
-     * whole node list and we should not continue.  with each recursion we log an error
+     * whole node list and we should not continue.  with each iteration we log an error
      * before moving on to the next node in the list
      * 
      * @param <type> $url
@@ -482,22 +512,38 @@ class PHPDFS
      */
     protected function sendDelete( $url, $filename, $replicaNo, $replicationDegree, $position ){
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($ch);
+        $errNo = 0;
+        $nodes = $this->getTargetNodes();
+        $numTargetNodes = count( $nodes );
+        $nextPosition = $position = $this->getPositionByUrl($url);
+        $attempt = 0;
+        do{
+            $attempt++;
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            $errNo = curl_errno($ch);
+            if( $errNo ){
+                error_log("attempt $attempt to forward a delete command to $url via curl failed.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
+                $replicaNo++;
+                $nextPosition++;
+                $nextPosition %= $numTargetNodes;
+                $url = $this->getForwardUrl( $filename, $replicaNo, $replicationDegree, $nextPosition );
+            }
+        } while( $errNo && $position != $nextPosition && $url );
     }
 
     /**
-     * potentially recursive function calls will occur here if for some reason
-     * we do not successfully propagate an action to the next node
      *
-     * we will only recurse until we see that the position number we are currently
-     * recursing with is the same as the position number with which we started.
-     * if the two position values are equal then that means we have cycled on the
-     * whole node list and we should not continue.  with each recursion we log an error
-     * before moving on to the next node in the list
+     * we will try to send data to the node identified by the url passed in to us
+     * if we experience an error communicating with the url, we then go to the next
+     * node in the list and repeat until we get a good node. if we cannot find a good node
+     * then we just exit.
+     *
+     * the position parameter is important here as it needs to correlate to the url to which we are forwarding
+     * so we check for the NO_POSITION value and if it is the no
      *
      * @param <type> $from
      * @param <type> $url
@@ -506,69 +552,42 @@ class PHPDFS
      * @param <type> $replicationDegree
      * @param <type> $position
      */
-    protected function sendData( $from, $url, $filename, $replicaNo, $replicationDegree, $position ){
-        $fh = fopen($from, "r");
-        $size = filesize( $from );
+    protected function sendData( $filePath, $url, $filename, $replicaNo, $replicationDegree, $position ){
+        $fh = fopen($filePath, "r");
+        $size = filesize( $filePath );
         rewind($fh);
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_INFILE, $fh);
-        curl_setopt($ch, CURLOPT_INFILESIZE, $size );
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_PUT, 4);
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($ch);
+
+        $errNo = 0;
+        $nodes = $this->getTargetNodes();
+        $numTargetNodes = count( $nodes );
+        $nextPosition = $position = $this->getPositionByUrl($url);
+        $attempt = 0;
+        do{
+            $attempt++;
+            curl_setopt($ch, CURLOPT_INFILE, $fh);
+            curl_setopt($ch, CURLOPT_INFILESIZE, $size );
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_PUT, 4);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+            $errNo = curl_errno($ch);
+            if( $errNo ){
+                error_log("attempt $attempt to send data to $url via curl failed.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
+                $replicaNo++;
+                $nextPosition++;
+                $nextPosition %= $numTargetNodes;
+                $url = $this->getForwardUrl( $filename, $replicaNo, $replicationDegree, $nextPosition );
+            }
+        } while( $errNo && $position != $nextPosition && $url );
+
         fclose($fh);
-    }
-
-    /** LOOP ALERT
-    * we can end up in a loop if for some reaon we find
-    * an ip in the http_host that does not match what is in the configuration
-    * and we end up forwarding to an ip address that resolves back to this machine.
-    *
-    * or if we do not have a http_host in the environment and we use the 'thisProxyUrl'
-    * config value and that is wrong
-    *
-    * so the moral of the story is to make sure that either the $_SERVER['HTTP_HOST'] or the "myIp"
-    * setting matches one of the hosts in the node config  or we make the assumption that this server
-    * is just to act as a forwarding agent for the data on stdin.
-    *
-    */
-
-    public function getNodePosition( ){
-        if( is_null( $this->nodePosition ) ) {
-            // set this node as if it has no position
-            $this->nodePosition = self::NO_TARGET_POSITION;
-            $thisHost = '';
-            if( isset( $this->config['thisProxyUrl'] ) &&  $this->config['thisProxyUrl'] ){
-                $thisHost = $this->config['thisProxyUrl'];
-            } else if( isset( $_SERVER['HTTP_HOST'] ) && $_SERVER['HTTP_HOST'] ){
-                $thisHost = $_SERVER['HTTP_HOST'];
-            } else {
-                throw new Exception(
-                    "No ip address available for checking.  Please add one to the 'thisProxyUrl' configuration value ".
-                    "or make sure that the _SERVER['HTTP_HOST'] var has a value"
-                );
-            }
-
-            $targetNodes = $this->getTargetNodes();
-            $n = 0;
-            foreach( $targetNodes as $node ){
-                if( $node['proxyUrl'] == $thisHost ){
-                    $isTarget = true;
-                    // we are a target node so set the node position
-                    $this->nodePosition = $n;
-                    break;
-                }
-                $n++;
-            }
-        }
-        return $this->nodePosition;
     }
 
     public function iAmATarget( ){
         $isTarget = false;
-        $targetPos = $this->getNodePosition( );
+        $targetPos = $this->getPositionByUrl( );
         if( is_numeric( $targetPos ) && $targetPos > self::NO_TARGET_POSITION ){
             $isTarget = true;
         } else {
