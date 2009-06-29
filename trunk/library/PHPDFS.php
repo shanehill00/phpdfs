@@ -338,8 +338,8 @@ class PHPDFS
     protected function spoolData( $disconnect = false ){
 
         // write stdin to a temp file
-        $tmpFH = fopen($this->tmpPath, "w");
-        $putData = fopen("php://input", "r");
+        $tmpFH = fopen($this->tmpPath, "wb");
+        $putData = fopen("php://input", "rb");
 
         while ($data = fread($putData, 1024))
           fwrite($tmpFH, $data);
@@ -553,7 +553,7 @@ class PHPDFS
      * @param <type> $position
      */
     protected function sendData( $filePath, $url, $filename, $replicaNo, $replicationDegree, $position ){
-        $fh = fopen($filePath, "r");
+        $fh = fopen($filePath, "rb");
         $size = filesize( $filePath );
         rewind($fh);
         $ch = curl_init();
