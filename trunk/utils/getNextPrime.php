@@ -1,6 +1,39 @@
 <?php
 
+class testError{
+    public function handlePutError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        echo("in handlePutError\n");
+        throw new Exception( " $errno : $errmsg : $errfile : $errline " );
+    }
 
+    public function putData(){
+        set_error_handler( array( $this, "handlePutError") );
+        try{
+            echo("before spool data\n");
+            $jooby = $this->spoolData( );
+            echo("after spool data\n");
+
+            $this->saveData( );
+        } catch( Exception $e ){
+            echo("caught exception\n");
+            error_log($e->getMessage().' : '.$e->getTraceAsString() );
+        }
+        restore_error_handler();
+    }
+
+    public function spoolData(){
+        echo("entering spool data\n");
+        fopen("/shaneo","r");
+        echo("exiting spool data\n");
+    }
+}
+
+$te = new testError();
+$te->putData();
+
+/**
+ *
+ *
     $num = isset($argv[1]) ? $argv[1] : 0;
     echo( getNextPositivePrime( $num )."\n" );
 
@@ -15,51 +48,11 @@
         $bijection = array( null, null, null, null, null );
         for( $j = 0; $j < $m; $j++ ){
             $bIdx = ($j + $replicaNo * $prime) % $m;
-            //  m % j = m - ( ((int) m / j) * j )
-            $bIdx2 = ($j + ($replicaNo * $prime) ) - ( ((int) (( $j + ($replicaNo * $prime ) ) / $m) * $m ));
-            // print_r(array("bIdx2: $bIdx2", "bIdx: $bIdx"));
-            /** 1 = ( $j + $replicaNo * $prime ) / $m
-             *
-             * 1 = (j + (m-1)) / m
-             *
-             * replicaNo * prime = m - 1
-             *
-             * prime = (m - j) / replicaNo
-             *
-             * k = m - j
-             *
-             *  $m = ( $j )+  ($replicaNo * $prime )
-             *  $m - $j = $replicaNo * $prime;
-             *  $prime = ( $m - $j ) / $replicaNo;
-             *
-             * 1 + (2 * 7) = 5
-             *
-             * 2 * 7 = 4
-             *
-             * 7 = 4 / 2
-             *
-             * 7 = 2
-             *
-             * $bIdx = ($j + $replicaNo * $prime) % $m
-             * 0 = (1 + 2 * 7) % 5
-             *
-             * 4 % 30 = 4 - ( ((int)(4 / 30)) * 30 )
-             *
-             * mo = m % j;
-             * mo = m - ( ((int) m / j) * j )
-             * m - mo = ( ((int) m / j) * j )
-             * (m - mo) / j = (int) m / j
-             *
-             * $bIdx2 = ($j + ($replicaNo * $prime) ) - ( ((int) (( $j + ($replicaNo * $prime ) ) / $m) * $m ));
-             * ( ((int) (( $j + ($replicaNo * $prime ) ) / $m) * $m )) = ($j + ($replicaNo * $prime) ) - $bIdx2;
-             */
-            if( $bIdx == 0 ){
-                print_r( "$bIdx = ($j + $replicaNo * $prime) % $m\n" );
-            }
             $bijection[$bIdx] = $array[$j];
         }
         print_r( array($replicaNo, $prime, $bijection) );
     }
+**/
 
     /**
      * given a number n

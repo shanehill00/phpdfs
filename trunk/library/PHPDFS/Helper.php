@@ -30,6 +30,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class PHPDFS_Helper {
 
 
+    protected static $clientGone = false;
 
     public static function getConfig( $name = "cluster_config.php" ){
         return require $name;
@@ -57,6 +58,7 @@ class PHPDFS_Helper {
     }
 
     public static function disconnectClient() {
+        if(self::$clientGone) return;
         // use a 204 no content header
         header( $_SERVER['SERVER_PROTOCOL']." 204 No Content" ) ;
         if( ob_get_length() ){
@@ -64,27 +66,34 @@ class PHPDFS_Helper {
         }
         header("Content-Length: 0");
         session_write_close();
+        self::$clientGone = true;
     }
     
     public static function send500( $msg ) {
+        if(self::$clientGone) return;
         header(  $_SERVER['SERVER_PROTOCOL'].' 500 Internal Server Error' );
         header("Content-Length: ".strlen($msg));
         echo($msg);
         session_write_close();
+        self::$clientGone = true;
     }
 
     public static function send301( $url ) {
+        if(self::$clientGone) return;
         header(  $_SERVER['SERVER_PROTOCOL'].' 301 Moved Permanently' );
         header('Location: '.$url);
         header('Content-Length: 0');
         session_write_close();
+        self::$clientGone = true;
     }
     
     public static function send404( $path = "" ) {
+        if(self::$clientGone) return;
         $msg = "cannot find $path";
         header(  $_SERVER['SERVER_PROTOCOL']." 404 Not Found" ) ;
         header("Content-Length: ".strlen($msg));
         echo($msg);
         session_write_close();
+        self::$clientGone = true;
     }
 }
