@@ -316,7 +316,7 @@ class PHPDFS
 
         set_error_handler( array( $this, "handleForwardDeleteError") );
         try{
-            $this->forwardDelete();
+            $this->sendDelete();
         } catch( PHPDFS_DeleteException $e ){
             error_log(" error while forwarding the delete action " .$e->getMessage().' : '.$e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
@@ -437,10 +437,6 @@ class PHPDFS
             );
         }
         return $forwardInfo;
-    }
-
-    protected function forwardDelete( ){
-        $this->sendDelete();
     }
 
     protected function forwardData( ){
