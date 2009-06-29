@@ -417,7 +417,7 @@ class PHPDFS
                 $position %= count( $targetNodes );
 
                 $forwardInfo = array(
-                    'forwardUrl' => join("/", array( $targetNodes[$position]['proxyUrl'], $filename, $replica, $position ) ),
+                    'forwardUrl' => join("/", array( $targetNodes[$position]['proxyUrl'], $filename ) ),
                     'position' => $position,
                     'replica' => $replica,
                 );
@@ -431,7 +431,7 @@ class PHPDFS
                 $position %= count( $targetNodes );
             }
             $forwardInfo = array(
-                'forwardUrl' => join('/', array($targetNodes[$position]['proxyUrl'],$filename ) ),
+                'forwardUrl' => join('/', array($targetNodes[$position]['proxyUrl'], $filename ) ),
                 'position' => $position,
                 'replica' => $replica,
             );
@@ -491,7 +491,11 @@ class PHPDFS
             $errNo = 0;
             $origPosition = $forwardInfo['position'];
             $ch = curl_init();
+            $headers = array();
             do{
+                $headers[0] = 'Phpdfs-Replica: '.$forwardInfo['replica'];
+                $headers[1] = 'Phpdfs-Position: '.$forwardInfo['position'];
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers );
                 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
                 curl_setopt($ch, CURLOPT_URL, $forwardInfo['forwardUrl'] );
@@ -528,18 +532,22 @@ class PHPDFS
 
             $errNo = 0;
             $origPosition = $forwardInfo['position'];
-            $ch = curl_init();
+            $curl = curl_init();
+            $headers = array();
             do{
-                curl_setopt($ch, CURLOPT_INFILE, $fh);
-                curl_setopt($ch, CURLOPT_INFILESIZE, $size );
-                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                curl_setopt($ch, CURLOPT_PUT, 4);
-                curl_setopt($ch, CURLOPT_URL, $forwardInfo['forwardUrl']);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                $response = curl_exec($ch);
-                $errNo = curl_errno($ch);
+                $headers[0] = 'Phpdfs-Replica: '.$forwardInfo['replica'];
+                $headers[1] = 'Phpdfs-Position: '.$forwardInfo['position'];
+                curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+                curl_setopt($curl, CURLOPT_INFILE, $fh);
+                curl_setopt($curl, CURLOPT_INFILESIZE, $size );
+                curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                curl_setopt($curl, CURLOPT_PUT, 4);
+                curl_setopt($curl, CURLOPT_URL, $forwardInfo['forwardUrl']);
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($curl);
+                $errNo = curl_errno($curl);
                 if( $errNo ){
-                    error_log("replica: ".$forwardInfo['replica']." - sending data to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
+                    error_log("replica: ".$forwardInfo['replica']." - sending data to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
