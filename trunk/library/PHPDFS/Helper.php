@@ -37,21 +37,24 @@ class PHPDFS_Helper {
     }
 
     public static function getParamsFromUrl(){
-        $params = array( 'name' => '', 'replica' => 0, 'position' => null );
+        $params = array( 'name' => '', 'dir' => '', 'replica' => 0, 'position' => null );
         if( isset( $_SERVER['PATH_INFO'] ) ){
             $data = trim($_SERVER['PATH_INFO'],'/');
             $data = split('\/', $data);
 
-            if( isset( $data[0] ) ){
-                $params['name'] = $data[0];
+            $params['name'] = array_pop($data);
+            if( $data ){
+                $params['dir'] = join('/',$data);
             }
 
-            if( isset( $data[1] ) ){
-                $params['replica'] = $data[1];
+            $headers = http_get_request_headers();
+
+            if( isset( $headers[ 'Phpdfs-Replica' ] ) ){
+                $params['replica'] = $headers[ 'Phpdfs-Replica' ];
             }
 
-            if( isset( $data[2] ) ){
-                $params['position'] = $data[2];
+            if( isset( $headers[ 'Phpdfs-Position' ] ) ){
+                $params['position'] = $headers[ 'Phpdfs-Position' ];
             }
         }
         return $params;
