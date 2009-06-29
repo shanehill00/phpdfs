@@ -490,20 +490,20 @@ class PHPDFS
         if( $forwardInfo ){
             $errNo = 0;
             $origPosition = $forwardInfo['position'];
-            $ch = curl_init();
+            $curl = curl_init();
             $headers = array();
             do{
                 $headers[0] = 'Phpdfs-Replica: '.$forwardInfo['replica'];
                 $headers[1] = 'Phpdfs-Position: '.$forwardInfo['position'];
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers );
-                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-                curl_setopt($ch, CURLOPT_URL, $forwardInfo['forwardUrl'] );
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                $response = curl_exec($ch);
-                $errNo = curl_errno($ch);
+                curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+                curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+                curl_setopt($curl, CURLOPT_URL, $forwardInfo['forwardUrl'] );
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($curl);
+                $errNo = curl_errno($curl);
                 if( $errNo ){
-                    error_log("replica ".$forwardInfo['replica']." : forwarding a delete command to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
+                    error_log("replica ".$forwardInfo['replica']." : forwarding a delete command to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
