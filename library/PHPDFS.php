@@ -386,7 +386,18 @@ class PHPDFS
         }
     }
 
-    protected function getForwardUrl( $replica, $position ){
+    protected function getForwardInfo( $replica = null, $position = null ){
+
+        if( is_null( $replica ) ){
+            $replica = (int) $this->params['replica'];
+        }
+        if( is_null( $position ) ) {
+            $position = $this->params['position'];
+            if( !is_numeric( $position ) ){
+                $position = $this->getTargetNodePosition( );
+            }
+        }
+
         $forwardInfo = null;
         $targetNodes = $this->getTargetNodes();
         $filename = $this->params['name'];
@@ -415,6 +426,9 @@ class PHPDFS
             if( $position == self::NO_TARGET_POSITION ){
                 srand();
                 $position = rand(0, (count($targetNodes)-1) );
+            } else {
+                $position++;
+                $position %= count( $targetNodes );
             }
             $forwardInfo = array(
                 'forwardUrl' => join('/', array($targetNodes[$position]['proxyUrl'],$filename ) ),
@@ -426,54 +440,18 @@ class PHPDFS
     }
 
     protected function forwardDelete( ){
-        
-        $replicaNo = (int) $this->params['replica'];
-        $position = $this->params['position'];
-        if( !is_numeric( $position ) ){
-            $position = $this->getTargetNodePosition( );
-        }
-
-        $forwardInfo = $this->getForwardUrl($replicaNo, $position);
-        if( $forwardInfo ){
-            $this->sendDelete($forwardInfo);
-        }
+        $this->sendDelete();
     }
 
-    /**
-     * forward the data on to the next node
-     * the reasons for forwarding are:
-     *
-     * we are NOT a targetNode and are just the first node
-     * to receive the upload, so we forward the data to the first targetNode
-     * and remove the spooled file
-     *
-     * OR we are a targetNode and need to fulfill the replication requirements
-     * so, we forward data to the next targetNode in our list.
-     * however, if we are the last replication targetNode, we DO NOTHING.
-    */
     protected function forwardData( ){
 
-        $filename = $this->params['name'];
-        $replicaNo = (int) $this->params['replica'];
-        $replicationDegree = (int) $this->config['replicationDegree'];
-        $position = $this->params['position'];
-        if( !is_numeric( $position ) ){
-            $position = $this->getTargetNodePosition( );
+        if( $this->iAmATarget() ){
+            $this->sendData($this->finalPath );
+        } else {
+            $this->sendData( $this->tmpPath );
+            unlink( $this->tmpPath );
         }
 
-        $forwardInfo = $this->getForwardUrl( $replicaNo, $position);
-        if( $forwardInfo ){
-            if( $this->iAmATarget() ){
-                $this->sendData($this->finalPath, $forwardInfo, $replicaNo, $position);
-            } else {
-                // our node position is negative 1 here.  node position meaning the place we hold in the target node list
-                // and since we are in this block of code our position is -1 and we are not a target node
-                // since our position os -1 we need to get the position of the url to whcih we are redircting
-                // and pass that to sendData() so send data can do its thing correctly
-                $this->sendData($this->tmpPath, $forwardInfo, $replicaNo, $position );
-                unlink( $this->tmpPath );
-            }
-        }
     }
 
     public function getTargetNodes(){
@@ -505,44 +483,31 @@ class PHPDFS
     }
 
     /**
-     *
      * we will only loop until we see that the position number we are currently
      * looping with is the same as the position number with which we started.
      * if the two position values are equal then that means we have cycled on the
      * whole node list and we should not continue.  with each iteration we log an error
      * before moving on to the next node in the list
-     * 
-     * @param <type> $url
-     * @param <type> $filename
-     * @param <type> $replicaNo
-     * @param <type> $replicationDegree
-     * @param <type> $position
      */
-    protected function sendDelete( $forwardInfo, $replicaNo, $position ){
-        $url = $forwardInfo['forwardUrl'];
-        $ch = curl_init();
-        $errNo = 0;
-        $nodes = $this->getTargetNodes();
-        $numTargetNodes = count( $nodes );
-        $nextPosition = $position = $this->getTargetNodePosition($url);
-        $attempt = 0;
-        do{
-            $attempt++;
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
-            $errNo = curl_errno($ch);
-            if( $errNo ){
-                error_log("attempt $attempt to forward a delete command to $url via curl failed.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
-                $replicaNo++;
-                $nextPosition++;
-                $nextPosition %= $numTargetNodes;
-                $forwardInfo = $this->getForwardUrl( $replicaNo, $nextPosition );
-                $url = $forwardInfo['forwardUrl'];
-            }
-        } while( $errNo && $position != $nextPosition && $url );
+    protected function sendDelete( ){
+        $forwardInfo = $this->getForwardInfo( );
+        if( $forwardInfo ){
+            $errNo = 0;
+            $origPosition = $forwardInfo['position'];
+            $ch = curl_init();
+            do{
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+                curl_setopt($ch, CURLOPT_URL, $forwardInfo['forwardUrl'] );
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($ch);
+                $errNo = curl_errno($ch);
+                if( $errNo ){
+                    error_log("replica ".$forwardInfo['replica']." : forwarding a delete command to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
+                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
+                }
+            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+        }
     }
 
     /**
@@ -555,46 +520,35 @@ class PHPDFS
      * the position parameter is important here as it needs to correlate to the url to which we are forwarding
      * so we check for the NO_POSITION value and if it is the no
      *
-     * @param <type> $from
-     * @param <type> $url
-     * @param <type> $filename
-     * @param <type> $replicaNo
-     * @param <type> $replicationDegree
-     * @param <type> $position
+     * @param <string> $filepath - the file to send to the next node
      */
-    protected function sendData( $filePath, $forwardInfo, $replicaNo, $position ){
-        $fh = fopen($filePath, "rb");
-        $size = filesize( $filePath );
-        rewind($fh);
-        $ch = curl_init();
+    protected function sendData( $filePath ){
 
-        $url = $forwardInfo['forwardUrl'];
-        $errNo = 0;
-        $nodes = $this->getTargetNodes();
-        $numTargetNodes = count( $nodes );
-        $nextPosition = $position = $this->getTargetNodePosition($url);
-        $attempt = 0;
-        do{
-            $attempt++;
-            curl_setopt($ch, CURLOPT_INFILE, $fh);
-            curl_setopt($ch, CURLOPT_INFILESIZE, $size );
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_PUT, 4);
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
-            $errNo = curl_errno($ch);
-            if( $errNo ){
-                error_log("attempt $attempt to send data to $url via curl failed.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
-                $replicaNo++;
-                $nextPosition++;
-                $nextPosition %= $numTargetNodes;
-                $forwardInfo = $this->getForwardUrl( $replicaNo, $nextPosition );
-                $url = $forwardInfo['forwardUrl'];
-            }
-        } while( $errNo && $position != $nextPosition && $url );
+        $forwardInfo = $this->getForwardInfo( );
+        if( $forwardInfo ){
+            $fh = fopen($filePath, "rb");
+            $size = filesize( $filePath );
+            rewind($fh);
 
-        fclose($fh);
+            $errNo = 0;
+            $origPosition = $forwardInfo['position'];
+            $ch = curl_init();
+            do{
+                curl_setopt($ch, CURLOPT_INFILE, $fh);
+                curl_setopt($ch, CURLOPT_INFILESIZE, $size );
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_PUT, 4);
+                curl_setopt($ch, CURLOPT_URL, $forwardInfo['forwardUrl']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($ch);
+                $errNo = curl_errno($ch);
+                if( $errNo ){
+                    error_log("replica: ".$forwardInfo['replica']." - sending data to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($ch)." curl error message: ".curl_error($ch)." |||| response: $response" );
+                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
+                }
+            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            fclose($fh);
+        }
     }
 
     public function iAmATarget( ){
