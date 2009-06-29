@@ -387,7 +387,7 @@ class PHPDFS
     }
 
     protected function getForwardUrl( $replica, $position ){
-        $url = null;
+        $forwardInfo = null;
         $targetNodes = $this->getTargetNodes();
         $filename = $this->params['name'];
         if( $this->iAmATarget() ){
@@ -405,16 +405,24 @@ class PHPDFS
                 // resolve the array index for our position in the list of targetNodes
                 $position %= count( $targetNodes );
 
-                $url = join("/", array( $targetNodes[$position]['proxyUrl'], $filename, $replica, $position ) );
+                $forwardInfo = array(
+                    'forwardUrl' => join("/", array( $targetNodes[$position]['proxyUrl'], $filename, $replica, $position ) ),
+                    'position' => $position,
+                    'replica' => $replica,
+                );
             }
         } else {
             if( $position == self::NO_TARGET_POSITION ){
                 srand();
                 $position = rand(0, (count($targetNodes)-1) );
             }
-            $url = join('/', array($targetNodes[$position]['proxyUrl'],$filename ) );
+            $forwardInfo = array(
+                'forwardUrl' => join('/', array($targetNodes[$position]['proxyUrl'],$filename ) ),
+                'position' => $position,
+                'replica' => $replica,
+            );
         }
-        return $url;
+        return $forwardInfo;
     }
 
     protected function forwardDelete( ){
@@ -425,9 +433,9 @@ class PHPDFS
             $position = $this->getTargetNodePosition( );
         }
 
-        $forwardUrl = $this->getForwardUrl($replicaNo, $position);
-        if( $forwardUrl ){
-            $this->sendDelete($forwardUrl, $replicaNo, $position);
+        $forwardInfo = $this->getForwardUrl($replicaNo, $position);
+        if( $forwardInfo ){
+            $this->sendDelete($forwardInfo);
         }
     }
 
@@ -453,16 +461,16 @@ class PHPDFS
             $position = $this->getTargetNodePosition( );
         }
 
-        $forwardUrl = $this->getForwardUrl( $replicaNo, $position);
-        if( $forwardUrl ){
+        $forwardInfo = $this->getForwardUrl( $replicaNo, $position);
+        if( $forwardInfo ){
             if( $this->iAmATarget() ){
-                $this->sendData($this->finalPath, $forwardUrl, $replicaNo, $position);
+                $this->sendData($this->finalPath, $forwardInfo, $replicaNo, $position);
             } else {
                 // our node position is negative 1 here.  node position meaning the place we hold in the target node list
                 // and since we are in this block of code our position is -1 and we are not a target node
                 // since our position os -1 we need to get the position of the url to whcih we are redircting
                 // and pass that to sendData() so send data can do its thing correctly
-                $this->sendData($this->tmpPath, $forwardUrl, $replicaNo, $position );
+                $this->sendData($this->tmpPath, $forwardInfo, $replicaNo, $position );
                 unlink( $this->tmpPath );
             }
         }
@@ -510,7 +518,8 @@ class PHPDFS
      * @param <type> $replicationDegree
      * @param <type> $position
      */
-    protected function sendDelete( $url, $replicaNo, $position ){
+    protected function sendDelete( $forwardInfo, $replicaNo, $position ){
+        $url = $forwardInfo['forwardUrl'];
         $ch = curl_init();
         $errNo = 0;
         $nodes = $this->getTargetNodes();
@@ -530,7 +539,8 @@ class PHPDFS
                 $replicaNo++;
                 $nextPosition++;
                 $nextPosition %= $numTargetNodes;
-                $url = $this->getForwardUrl( $replicaNo, $nextPosition );
+                $forwardInfo = $this->getForwardUrl( $replicaNo, $nextPosition );
+                $url = $forwardInfo['forwardUrl'];
             }
         } while( $errNo && $position != $nextPosition && $url );
     }
@@ -552,12 +562,13 @@ class PHPDFS
      * @param <type> $replicationDegree
      * @param <type> $position
      */
-    protected function sendData( $filePath, $url, $replicaNo, $position ){
+    protected function sendData( $filePath, $forwardInfo, $replicaNo, $position ){
         $fh = fopen($filePath, "rb");
         $size = filesize( $filePath );
         rewind($fh);
         $ch = curl_init();
 
+        $url = $forwardInfo['forwardUrl'];
         $errNo = 0;
         $nodes = $this->getTargetNodes();
         $numTargetNodes = count( $nodes );
@@ -578,7 +589,8 @@ class PHPDFS
                 $replicaNo++;
                 $nextPosition++;
                 $nextPosition %= $numTargetNodes;
-                $url = $this->getForwardUrl( $replicaNo, $nextPosition );
+                $forwardInfo = $this->getForwardUrl( $replicaNo, $nextPosition );
+                $url = $forwardInfo['forwardUrl'];
             }
         } while( $errNo && $position != $nextPosition && $url );
 
