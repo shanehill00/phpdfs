@@ -247,8 +247,7 @@ class PHPDFS
                 PHPDFS_Helper::send301( $nodes[0]['proxyUrl'].'/'.$this->params['name'] );
             }
         } else{
-            $notFound = $this->params['name'];
-            PHPDFS_Helper::send404( $notFound );
+            PHPDFS_Helper::send404( $this->params['name'] );
         }
     }
 
