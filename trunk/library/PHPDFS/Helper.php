@@ -30,22 +30,45 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class PHPDFS_Helper {
 
 
+    /**
+     * indicates whether or not the client is still connected to us
+     * @var <boolean>
+     */
     protected static $clientGone = false;
 
+    /**
+     * hold a copy of the last loaded config by getConfig()
+     *
+     * @var <array>
+     */
+    protected static $config = null;
+
+    /**
+     * returns the last loaded config from the previous call to
+     * getConfig, null otherwise.  if a name is passed, an attemot to load
+     * that config is made
+     *
+     * @param <string> $name
+     * @return <array>
+     */
     public static function getConfig( $name = "cluster_config.php" ){
-        return require $name;
+        if( !self::$config || $name ){
+            self::$config = require $name;
+        }
+        return self::$config;
     }
 
     public static function getParamsFromUrl(){
-        $params = array( 'name' => '', 'dir' => '', 'replica' => 0, 'position' => null );
+        $params = array( 'name' => '', 'replica' => 0, 'position' => null );
         if( isset( $_SERVER['PATH_INFO'] ) ){
-            $data = trim($_SERVER['PATH_INFO'],'/');
-            $data = split('\/', $data);
+            $params['name'] = trim($_SERVER['PATH_INFO'],'/');
 
-            $params['name'] = array_pop($data);
-            if( $data ){
-                $params['dir'] = join('/',$data);
-            }
+            // get the last element of the path info
+            $params['fileName'] = split( '/', $params['name'] );
+            $params['fileName'] = array_pop( $params['fileName'] );
+
+            // hash the path info
+            $params['pathHash'] = self::getPathHash( $params['name'] );
 
             $headers = http_get_request_headers();
 
@@ -58,6 +81,19 @@ class PHPDFS_Helper {
             }
         }
         return $params;
+    }
+
+    public static function getPathHash( $name, $separator = '/' ){
+        // hash the file name
+        $c = self::getConfig();
+        $pathSuffixHash = md5( $name );
+        $pathSuffix = array();
+        $pathSuffix[] = substr( $pathSuffixHash, 0, 2 );
+        $pathSuffix[] = substr( $pathSuffixHash, 2, 2 );
+        $pathSuffix[] = substr( $pathSuffixHash, 4, 2 );
+        $pathSuffix[] = substr( $pathSuffixHash, 6, 2 );
+        $pathSuffix = join( $separator, $pathSuffix );
+        return $pathSuffix;
     }
 
     public static function disconnectClient() {
