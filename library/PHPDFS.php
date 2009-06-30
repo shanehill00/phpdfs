@@ -140,6 +140,13 @@ class PHPDFS
     protected $finalPath = "";
 
     /**
+     * final path to the directory where the file will be saved
+     *
+     * @var <string>
+     */
+    protected $finalDir = "";
+    
+    /**
      * an array that holds all the target nodes
      * for the file being saved
      *
@@ -192,8 +199,9 @@ class PHPDFS
         $this->config = $config;
         $this->params = $params;
 
-        $this->finalPath = join($config['pathSeparator'],array($config['storageRoot'],$params['name']));
-        $this->tmpPath = join($config['pathSeparator'],array($config['tmpRoot'],uuid_create()));
+        $this->finalDir = join( $config['pathSeparator'], array($config['storageRoot'], $params['pathHash'] ) );
+        $this->finalPath = join( $config['pathSeparator'], array( $this->finalDir, $params['fileName'] ) );
+        $this->tmpPath = join( $config['pathSeparator'], array($config['tmpRoot'], uuid_create()));
     }
 
 
@@ -373,9 +381,15 @@ class PHPDFS
     protected function saveData( ){
         if(  $this->iAmATarget( ) ){
 
-            if(  !copy($this->tmpPath, $this->finalPath) ){
+            if( !file_exists( $this->finalDir ) ){
+                // suppress any probs in case someone
+                // else is making this directory
+                @mkdir( $this->finalDir, 0755, true );
+            }
+
+            if(  !copy( $this->tmpPath, $this->finalPath ) ){
                 // throw exception if the copy failed
-                throw new Exception("final copy operation failed");
+                throw new Exception("final copy operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
             }
 
             $deleted = unlink( $this->tmpPath );
