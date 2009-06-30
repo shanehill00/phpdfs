@@ -83,7 +83,7 @@ class PHPDFS_Helper {
         return $params;
     }
 
-    public static function getPathHash( $name, $separator = '/' ){
+    public static function getPathHash( $name ){
         // hash the file name
         $c = self::getConfig();
         $pathSuffixHash = md5( $name );
@@ -92,7 +92,7 @@ class PHPDFS_Helper {
         $pathSuffix[] = substr( $pathSuffixHash, 2, 2 );
         $pathSuffix[] = substr( $pathSuffixHash, 4, 2 );
         $pathSuffix[] = substr( $pathSuffixHash, 6, 2 );
-        $pathSuffix = join( $separator, $pathSuffix );
+        $pathSuffix = join( $c['pathSeparator'], $pathSuffix );
         return $pathSuffix;
     }
 
