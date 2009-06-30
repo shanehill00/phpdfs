@@ -58,7 +58,7 @@ class PHPDFS_Helper {
         return self::$config;
     }
 
-    public static function getParamsFromUrl(){
+    public static function getParams(){
         $params = array( 'name' => '', 'replica' => 0, 'position' => null );
         if( isset( $_SERVER['PATH_INFO'] ) ){
             $params['name'] = trim($_SERVER['PATH_INFO'],'/');

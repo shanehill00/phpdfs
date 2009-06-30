@@ -33,7 +33,7 @@ require_once("PHPDFS.php");
 require_once("PHPDFS/Helper.php");
 
 $config = PHPDFS_Helper::getConfig();
-$params = PHPDFS_Helper::getParamsFromUrl();
+$params = PHPDFS_Helper::getParams();
 
 $dfs = new PHPDFS( $config, $params );
 $dfs->handleRequest();
