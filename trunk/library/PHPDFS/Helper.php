@@ -63,6 +63,7 @@ class PHPDFS_Helper {
             'fileName' => '',
             'pathHash' => '',
             'name' => '',
+            'action' => '',
             'replica' => 0,
             'position' => null,
             'configIndex' => 0,
@@ -71,6 +72,8 @@ class PHPDFS_Helper {
         );
         if( isset( $_SERVER['PATH_INFO'] ) ){
             $params['name'] = trim($_SERVER['PATH_INFO'],'/');
+
+            $params['action'] = strtolower( $_SERVER['REQUEST_METHOD'] );
 
             // get the last element of the path info
             $params['fileName'] = split( '/', $params['name'] );
