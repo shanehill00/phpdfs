@@ -194,7 +194,7 @@ class PHPDFS
      *
      * @var <int>
      */
-    const NO_TARGET_POSITION = -1;
+    const POSITION_NONE = -1;
 
     const HEADER_REPLICA           = 'Phpdfs-Replica';
     const HEADER_POSITION          = 'Phpdfs-Position';
@@ -238,11 +238,78 @@ class PHPDFS
         $action = $this->params['action'];
         if( $action == 'get' ){
             $this->getData();
+
         } else if( $action == 'put' ){
             $this->putData();
+
         } else if( $action == 'delete' ){
             $this->deleteData();
+
+        }else if( $action == 'move' ){
+            $this->moveData();
+
         }
+    }
+
+    /**
+     * we move within 3 different contexts:
+     *      start - this is the context when a move has not started copying data
+     *              yet and we are still looking for the node that contains the data to be
+     *              moved
+     *
+     *      create - this is the context after start and means that we are creating new data
+     *               to facilitate the move function
+     *
+     *      delete - this is the context after the create phase is over nd we are deleting the old data
+     *
+     *  basically we try and ensure that data is always available and to that end we
+     *  move data by first traveling to each node in the new config and copying the data to disk
+     *  then we go to each node in the old config and remove the data.  by doing this we ensure that
+     *  the data is always avaialable to all clients
+     *
+     *  so depending on our context, we make a decision to run a method that will contribute to completing the
+     *  move action.
+     *
+     *
+     */
+    protected function moveData(){
+        if( isset( $this->params['moveContext'] ) ){
+            $context = $this->params['moveContext'];
+            if( $context == 'start' ){
+                $this->doStartForMove();
+            } else if( $context == 'create' ){
+                //$this->doCreateForMove();
+            } else if( $context == 'delete' ) {
+                //$this->doDeleteForMove();
+            }
+        }
+    }
+
+    /**
+     *  called when we are in start context for a move operation
+     * 
+     *  we check to see if we were a target node
+     *  that needs to be moved.  it checks using the configIndex value in the params name 'moveConfigIndex'.
+     *  if we are an owning node, we set the context to 'create' and we send the data to be moved
+     *  to the first node of the current config that should have the data.
+     *
+     *  if we are not the owning node, we get the list of possible nodes that are owners
+     *  and send the move command to the owner node with a context of 'start'
+     */
+    protected function doStartForMove(){
+        // here we make a new locator instance and use it to locate the old data
+        require_once( $this->config['locatorClassPath'] );
+        $locClass = $this->config['locatorClassName'];
+        $locator = new $locClass( $this->arrayConfig[ $this->params['moveConfigIndex'] ] );
+        $thisProxyUrl = $this->config['thisProxyUrl'];
+        $objKey = $this->params['name'];
+        if( $locator->isTargetNodeForObj( $thisProxyUrl, $objKey ) ){
+            $this->sendDataForMove( );
+        } else {
+            $nodes = $locator->findNodes( $objKey );
+            $this->sendStartMoveCmd( $nodes );
+        }
+
     }
     
     /**
@@ -323,7 +390,7 @@ class PHPDFS
         // however, if we are the last replication targetNode, we DO NOTHING.
         set_error_handler( array( $this, "handleForwardDataError") );
         try{
-            $this->forwardData( );
+            $this->forwardDataForPut( );
         } catch( PHPDFS_PutException $e ){
             error_log(" error while forwarding data" .$e->getMessage().' : '.$e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
@@ -429,23 +496,41 @@ class PHPDFS
         }
     }
 
-    protected function getForwardInfo( $replica = null, $position = null ){
+    protected function getForwardInfo( $replica = null, $position = null, $replicationDegree = null, $targetNodes = null ){
 
+        // solve replica value
         if( is_null( $replica ) ){
             $replica = (int) $this->params['replica'];
         }
+
+        // solve replicationDegree value
+        if( is_null( $replicationDegree ) ){
+            $replicationDegree = $this->config['replicationDegree'];
+        }
+
+        // obtain targetNodes for the
+        if( is_null( $targetNodes ) ){
+            $targetNodes = $this->getTargetNodes();
+        }
+
+        // solve position value
         if( is_null( $position ) ) {
             $position = $this->params['position'];
             if( !is_numeric( $position ) ){
-                $position = $this->getTargetNodePosition( );
+                $position = $this->getTargetNodePosition( $targetNodes );
             }
+        }
+        if( $position == self::POSITION_NONE ){
+            srand();
+            $position = rand(0, (count($targetNodes)-1) );
+        } else {
+            $position++;
+            $position %= count( $targetNodes );
         }
 
         $forwardInfo = null;
-        $targetNodes = $this->getTargetNodes();
         $filename = $this->params['name'];
-        if( $this->iAmATarget() ){
-            $replicationDegree = $this->config['replicationDegree'];
+        if( $this->iAmATarget( $targetNodes ) ){
             // check whether or not we are done replicating.
             //
             // replicas are identified by the replica number.
@@ -455,10 +540,6 @@ class PHPDFS
             // if not, that means we are done replicating and can quietly return
             if( $replica < ( $replicationDegree - 1 ) ) {
                 $replica++;
-                $position++;
-                // resolve the array index for our position in the list of targetNodes
-                $position %= count( $targetNodes );
-
                 $forwardInfo = array(
                     'forwardUrl' => join("/", array( $targetNodes[$position]['proxyUrl'], $filename ) ),
                     'position' => $position,
@@ -466,13 +547,6 @@ class PHPDFS
                 );
             }
         } else {
-            if( $position == self::NO_TARGET_POSITION ){
-                srand();
-                $position = rand(0, (count($targetNodes)-1) );
-            } else {
-                $position++;
-                $position %= count( $targetNodes );
-            }
             $forwardInfo = array(
                 'forwardUrl' => join('/', array($targetNodes[$position]['proxyUrl'], $filename ) ),
                 'position' => $position,
@@ -482,12 +556,12 @@ class PHPDFS
         return $forwardInfo;
     }
 
-    protected function forwardData( ){
+    protected function forwardDataForPut( ){
 
         if( $this->iAmATarget() ){
-            $this->sendData($this->finalPath );
+            $this->sendDataForPut( $this->finalPath );
         } else {
-            $this->sendData( $this->tmpPath );
+            $this->sendDataForPut( $this->tmpPath );
             unlink( $this->tmpPath );
         }
 
@@ -500,23 +574,23 @@ class PHPDFS
         return $this->targetNodes;
     }
 
-    protected function getTargetNodePosition( $url = null ){
-        if( !$url ){
-            $url = $this->config['thisProxyUrl'];
+    protected function getTargetNodePosition( $nodes = null, $proxyUrl = null ){
+        if( !$proxyUrl ){
+            $proxyUrl = $this->config['thisProxyUrl'];
         }
-        if( !$this->positionByUrl ){
-            // we also build the mapping between the url and the position
-            // so we can easily look up position by proxy url
-            $this->positionByUrl = array();
-            $position = 0;
+
+        if( !$nodes ){
             $nodes = $this->getTargetNodes();
-            foreach( $nodes as $node ){
-                $this->positionByUrl[ $node['proxyUrl'] ] = $position++;
-            }
         }
-        return isset( $this->positionByUrl[ $url ] ) 
-                ? $this->positionByUrl[ $url ]
-                : self::NO_TARGET_POSITION;
+        $position = self::POSITION_NONE;
+        $n = 0;
+        foreach( $nodes as $node ){
+            if($node['proxyUrl'] == $proxyUrl ){
+                $position = $n;
+            }
+            $n++;
+        }
+        return $position;
     }
 
     /**
@@ -563,7 +637,7 @@ class PHPDFS
      *
      * @param <string> $filepath - the file to send to the next node
      */
-    protected function sendData( $filePath ){
+    protected function sendDataForPut( $filePath ){
 
         $forwardInfo = $this->getForwardInfo( );
         if( $forwardInfo ){
@@ -597,10 +671,80 @@ class PHPDFS
         }
     }
 
-    public function iAmATarget( ){
+    protected function sendStartMoveCmd( $nodes ){
+        $forwardInfo = $this->getForwardInfo( );
+        if( $forwardInfo ){
+            $errNo = 0;
+            $origPosition = $forwardInfo['position'];
+            $curl = curl_init();
+            $headers = array();
+            do{
+                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
+                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
+                $headers[2] = self::HEADER_MOVE_CONTEXT.': start';
+                $headers[3] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                $headers[4] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
+                curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+
+                curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "MOVE");
+                curl_setopt($curl, CURLOPT_URL, $forwardInfo['forwardUrl'] );
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($curl);
+                $errNo = curl_errno($curl);
+                if( $errNo ){
+                    error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd in start context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
+                } else {
+                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in start context to ".$forwardInfo['forwardUrl'] );
+                }
+            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+        }
+    }
+
+    protected function sendDataForMove( ){
+        $filePath = $this->finalPath;
+        $forwardInfo = $this->getForwardInfo( );
+        if( $forwardInfo ){
+            $fh = fopen($filePath, "rb");
+            $size = filesize( $filePath );
+            rewind($fh);
+
+            $errNo = 0;
+            $origPosition = $forwardInfo['position'];
+            $curl = curl_init();
+            $headers = array();
+            do{
+                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
+                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
+                $headers[2] = self::HEADER_MOVE_CONTEXT.': create';
+                $headers[3] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                $headers[4] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
+                curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+
+                curl_setopt($curl, CURLOPT_INFILE, $fh);
+                curl_setopt($curl, CURLOPT_INFILESIZE, $size );
+                curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "MOVE");
+                curl_setopt($curl, CURLOPT_URL, $forwardInfo['forwardUrl']);
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($curl);
+                $errNo = curl_errno($curl);
+                if( $errNo ){
+                    error_log("replica: ".$forwardInfo['replica']." - sending data for a move in create context to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
+                }else {
+                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in create context to ".$forwardInfo['forwardUrl'] );
+                }
+            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            fclose($fh);
+        }
+    }
+
+    public function iAmATarget( $targetNodes = null ){
         $isTarget = false;
-        $targetPos = $this->getTargetNodePosition( );
-        if( is_numeric( $targetPos ) && $targetPos > self::NO_TARGET_POSITION ){
+        $targetPos = $this->getTargetNodePosition( $targetNodes );
+        if( is_numeric( $targetPos ) && $targetPos > self::POSITION_NONE ){
             $isTarget = true;
         } else {
             $isTarget = false;

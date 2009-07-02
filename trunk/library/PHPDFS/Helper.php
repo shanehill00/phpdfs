@@ -97,7 +97,7 @@ class PHPDFS_Helper {
             }
 
             if( isset( $headers[ PHPDFS::HEADER_MOVE_CONTEXT ] ) ){
-                $params['moveContext'] = $headers[ PHPDFS::HEADER_MOVE_CONTEXT ];
+                $params['moveContext'] = strtolower( $headers[ PHPDFS::HEADER_MOVE_CONTEXT ] );
             }
 
             if( isset( $headers[ PHPDFS::HEADER_MOVE_CONFIG_INDEX ] ) ){
