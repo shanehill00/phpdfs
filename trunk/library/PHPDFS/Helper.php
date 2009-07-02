@@ -59,7 +59,7 @@ class PHPDFS_Helper {
     }
 
     public static function getParams(){
-        $params = array( 'name' => '', 'replica' => 0, 'position' => null );
+        $params = array( 'name' => '', 'replica' => 0, 'position' => null, 'configIndex' => 0 );
         if( isset( $_SERVER['PATH_INFO'] ) ){
             $params['name'] = trim($_SERVER['PATH_INFO'],'/');
 

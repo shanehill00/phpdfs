@@ -37,6 +37,7 @@ class PHPDFS_Client{
      */
     
     protected $locator = null;
+    protected $config = null;
 
     const PHPDFS_PUT_ERR = 1;
     const PHPDFS_DELETE_ERR = 2;
@@ -45,6 +46,7 @@ class PHPDFS_Client{
     protected $errs;
 
     public function __construct( $config ){
+        $config = $config[0];
         require_once( $config['locatorClassPath'] );
         $locatorClassName = $config['locatorClassName'];
         $this->locator = new $locatorClassName( $config );

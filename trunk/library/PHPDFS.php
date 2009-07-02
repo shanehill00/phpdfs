@@ -99,6 +99,20 @@ class PHPDFS
 {
 
     /**
+     * holds an array of configs
+     * we need an array of config so that we can accommodate
+     * move commands and automatic movement of data
+     * when new resources are added
+     * or old resources are dellocated or removed
+     *
+     * there are also some values in the array that are "global"
+     * such as the path separator to use for file paths.
+     *
+     * @var <array>
+     */
+    protected $arrayConfig = null;
+
+    /**
      * holds the config data for this instantiation
      *
      * @var <array>
@@ -189,19 +203,24 @@ class PHPDFS
      * @param <type> $params
      */
 
-    public function __construct( $config, $params ){
+    public function __construct( $configArray, $params ){
         
-        require_once( $config['locatorClassPath'] );
-        $locatorClassName = $config['locatorClassName'];
-
-        $this->locator = new $locatorClassName( $config );
-
-        $this->config = $config;
         $this->params = $params;
+        // the configIndex tells us which config to use for this request
+        // it is initially passed to us via the header Phpdfs-Config-Index
+        // we need this value because we need to hve a "history" of configs to
+        // accommodate automatic movement of data.
+        $configIndex = $this->params['configIndex'];
+        $this->config = $configArray[ $configIndex ];
 
-        $this->finalDir = join( $config['pathSeparator'], array($config['storageRoot'], $params['pathHash'] ) );
-        $this->finalPath = join( $config['pathSeparator'], array( $this->finalDir, $params['fileName'] ) );
-        $this->tmpPath = join( $config['pathSeparator'], array($config['tmpRoot'], uuid_create()));
+        require_once( $this->config['locatorClassPath'] );
+        $locatorClassName = $this->config['locatorClassName'];
+
+        $this->locator = new $locatorClassName( $this->config );
+
+        $this->finalDir = join( $configArray['pathSeparator'], array($this->config['storageRoot'], $this->params['pathHash'] ) );
+        $this->finalPath = join( $configArray['pathSeparator'], array( $this->finalDir, $this->params['fileName'] ) );
+        $this->tmpPath = join( $configArray['pathSeparator'], array($this->config['tmpRoot'], uuid_create()));
     }
 
 
