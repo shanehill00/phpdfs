@@ -28,27 +28,29 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 return array(
-            'disconnectAfterSpooling' => true,
-            'locatorClassName' => 'PHPDFS_DataLocator_HonickyMillerR',
-            'locatorClassPath' => 'PHPDFS/DataLocator/HonickyMillerR.php',
-
             // architecture specific
             'pathSeparator' => '/',
-            'storageRoot' => '/tmp/testData',
-            'tmpRoot' => '/tmp/testData',
-            'magicDbPath' => '/sw/share/file/magic',
+            array(
+                'disconnectAfterSpooling' => true,
+                'locatorClassName' => 'PHPDFS_DataLocator_HonickyMillerR',
+                'locatorClassPath' => 'PHPDFS/DataLocator/HonickyMillerR.php',
 
-            //  node and cluster config below
-            'replicationDegree' => 2,
-            'thisProxyUrl' =>  'http://192.168.0.2:80/dfs.php',
-            'clusters' => array(
-                // cluster 1
-                array(
-                    'weight' => 1,
-                    'nodes' =>array(
-                         array('proxyUrl' => 'http://192.168.0.2:80/dfs.php',), // cluster 1 node 1 (1)
-                         array('proxyUrl' => 'http://192.168.0.6:80/dfs.php',), // cluster 1 node 2 (2)
+                'storageRoot' => '/tmp/testData',
+                'tmpRoot' => '/tmp/testData',
+                'magicDbPath' => '/sw/share/file/magic',
+
+                //  node and cluster config below
+                'replicationDegree' => 2,
+                'thisProxyUrl' =>  'http://192.168.0.2:80/dfs.php',
+                'clusters' => array(
+                    // cluster 1
+                    array(
+                        'weight' => 1,
+                        'nodes' =>array(
+                             array('proxyUrl' => 'http://192.168.0.2:80/dfs.php',), // cluster 1 node 1 (1)
+                             array('proxyUrl' => 'http://192.168.0.6:80/dfs.php',), // cluster 1 node 2 (2)
+                         ),
                      ),
-                 ),
+                  ),
               ),
         );
