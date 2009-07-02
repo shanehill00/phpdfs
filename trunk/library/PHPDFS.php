@@ -278,7 +278,7 @@ class PHPDFS
             if( $context == 'start' ){
                 $this->doStartForMove();
             } else if( $context == 'create' ){
-                error_log( "received a move action in create context ".print_r( $this, 1) );
+                error_log( "received a move action in create context ".print_r( $this->params, 1) );
                 //$this->doCreateForMove();
             } else if( $context == 'delete' ) {
                 //$this->doDeleteForMove();
@@ -305,7 +305,7 @@ class PHPDFS
         $thisProxyUrl = $this->config['thisProxyUrl'];
         $objKey = $this->params['name'];
         if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
-            $this->sendDataForMove( );
+            $this->sendDataToStartMove( );
         } else {
             $this->sendStartMoveCmd( $locator );
         }
@@ -683,11 +683,9 @@ class PHPDFS
             $curl = curl_init();
             $headers = array();
             do{
-                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
-                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
-                $headers[2] = self::HEADER_MOVE_CONTEXT.': start';
-                $headers[3] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
-                $headers[4] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
+                $headers[0] = self::HEADER_MOVE_CONTEXT.': start';
+                $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
 
                 curl_setopt($curl, CURLOPT_TIMEOUT, 10);
@@ -707,7 +705,7 @@ class PHPDFS
         }
     }
 
-    protected function sendDataForMove( ){
+    protected function sendDataToStartMove( ){
         $filePath = $this->finalPath;
         $forwardInfo = $this->getForwardInfo( );
         if( $forwardInfo ){
@@ -720,11 +718,9 @@ class PHPDFS
             $curl = curl_init();
             $headers = array();
             do{
-                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
-                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
-                $headers[2] = self::HEADER_MOVE_CONTEXT.': create';
-                $headers[3] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
-                $headers[4] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
+                $headers[0] = self::HEADER_MOVE_CONTEXT.': create';
+                $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
 
                 curl_setopt($curl, CURLOPT_INFILE, $fh);
