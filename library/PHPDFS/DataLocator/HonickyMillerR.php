@@ -296,4 +296,16 @@ class PHPDFS_DataLocator_HonickyMillerR
         }
         return $nodes;
     }
+
+    public function isTargetNodeForObj( $nodeUrl, $objKey ){
+        $isTarget = false;
+        $nodes = $this->findNodes($objKey);
+        foreach( $nodes as $node ){
+            if( $nodeUrl == $node['proxyUrl'] ){
+                $isTarget = true;
+                break;
+            }
+        }
+        return $isTarget;
+    }
 }

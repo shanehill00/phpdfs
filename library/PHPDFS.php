@@ -235,15 +235,16 @@ class PHPDFS
 
 
     public function handleRequest(){
-        if( $_SERVER['REQUEST_METHOD'] == 'GET' ){
+        $action = $this->params['action'];
+        if( $action == 'get' ){
             $this->getData();
-        } else if( $_SERVER['REQUEST_METHOD'] == 'PUT' ){
+        } else if( $action == 'put' ){
             $this->putData();
-        } else if( $_SERVER['REQUEST_METHOD'] == 'DELETE' ){
+        } else if( $action == 'delete' ){
             $this->deleteData();
         }
     }
-
+    
     /**
      * need to add a param to indicate that we want to continue looking for the data
      * if we are not actually a target node.  logically, any client directly
@@ -506,7 +507,7 @@ class PHPDFS
         if( !$this->positionByUrl ){
             // we also build the mapping between the url and the position
             // so we can easily look up position by proxy url
-            $this->positionByUrl= array();
+            $this->positionByUrl = array();
             $position = 0;
             $nodes = $this->getTargetNodes();
             foreach( $nodes as $node ){
