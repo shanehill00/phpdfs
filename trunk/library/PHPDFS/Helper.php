@@ -26,7 +26,7 @@ AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
-
+require_once 'PHPDFS.php';
 class PHPDFS_Helper {
 
 
@@ -59,7 +59,15 @@ class PHPDFS_Helper {
     }
 
     public static function getParams(){
-        $params = array( 'name' => '', 'replica' => 0, 'position' => null, 'configIndex' => 0 );
+        $params = array(
+            'fileName' => '',
+            'pathHash' => '',
+            'name' => '',
+            'replica' => 0,
+            'position' => null,
+            'configIndex' => 0,
+            'moveContext' => PHPDFS::MOVE_CONTEXT_START,
+        );
         if( isset( $_SERVER['PATH_INFO'] ) ){
             $params['name'] = trim($_SERVER['PATH_INFO'],'/');
 
@@ -72,12 +80,20 @@ class PHPDFS_Helper {
 
             $headers = http_get_request_headers();
 
-            if( isset( $headers[ 'Phpdfs-Replica' ] ) ){
-                $params['replica'] = $headers[ 'Phpdfs-Replica' ];
+            if( isset( $headers[ PHPDFS::HEADER_REPLICA ] ) ){
+                $params['replica'] = $headers[ PHPDFS::HEADER_REPLICA ];
             }
 
-            if( isset( $headers[ 'Phpdfs-Position' ] ) ){
-                $params['position'] = $headers[ 'Phpdfs-Position' ];
+            if( isset( $headers[ PHPDFS::HEADER_POSITION ] ) ){
+                $params['position'] = $headers[ PHPDFS::HEADER_POSITION ];
+            }
+
+            if( isset( $headers[ PHPDFS::HEADER_CONFIG_INDEX ] ) ){
+                $params['configIndex'] = $headers[ PHPDFS::HEADER_CONFIG_INDEX ];
+            }
+
+            if( isset( $headers[ PHPDFS::HEADER_MOVE_CONTEXT ] ) ){
+                $params['moveContext'] = $headers[ PHPDFS::HEADER_MOVE_CONTEXT ];
             }
         }
         return $params;

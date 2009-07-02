@@ -196,6 +196,15 @@ class PHPDFS
      */
     const NO_TARGET_POSITION = -1;
 
+    const HEADER_REPLICA = 'Phpdfs-Replica';
+    const HEADER_POSITION = 'Phpdfs-Position';
+    const HEADER_MOVE_CONTEXT = 'Phpdfs-Position';
+    const HEADER_CONFIG_INDEX = 'Phpdfs-Position';
+
+    const MOVE_CONTEXT_START = 'start';
+    const MOVE_CONTEXT_CREATE = 'create';
+    const MOVE_CONTEXT_DELETE = 'delete';
+
     /**
      *
      * @param <type> $locator
@@ -523,8 +532,8 @@ class PHPDFS
             $curl = curl_init();
             $headers = array();
             do{
-                $headers[0] = 'Phpdfs-Replica: '.$forwardInfo['replica'];
-                $headers[1] = 'Phpdfs-Position: '.$forwardInfo['position'];
+                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
+                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
                 curl_setopt($curl, CURLOPT_TIMEOUT, 10);
                 curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
@@ -565,8 +574,9 @@ class PHPDFS
             $curl = curl_init();
             $headers = array();
             do{
-                $headers[0] = 'Phpdfs-Replica: '.$forwardInfo['replica'];
-                $headers[1] = 'Phpdfs-Position: '.$forwardInfo['position'];
+                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
+                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
+                
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
                 curl_setopt($curl, CURLOPT_INFILE, $fh);
                 curl_setopt($curl, CURLOPT_INFILESIZE, $size );
