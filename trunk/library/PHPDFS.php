@@ -94,6 +94,7 @@ require_once 'PHPDFS/Helper.php';
 require_once 'PHPDFS/PutException.php';
 require_once 'PHPDFS/DeleteException.php';
 require_once 'PHPDFS/GetException.php';
+require_once 'PHPDFS/MoveException.php';
 
 class PHPDFS
 {
@@ -287,6 +288,28 @@ class PHPDFS
     }
 
     /**
+     * called when we are in create context for a move operation
+     *
+     * the algorithm at this point is very similar to the
+     * putData algorithm.
+     *
+     * spoolData
+     * saveData
+     * sendDataForMove
+     *
+     */
+
+    protected function doCreateForMove(){
+        $this->spoolData( );
+        $this->saveData( );
+        $this->sendDataForMove();
+    }
+
+
+    protected function handleMoveStartError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+    }
+    /**
      *  called when we are in start context for a move operation
      * 
      *  we check to see if we were a target node
@@ -301,14 +324,22 @@ class PHPDFS
         // here we make a new locator instance and use it to locate the old data
         require_once( $this->config['locatorClassPath'] );
         $locClass = $this->config['locatorClassName'];
-        $locator = new $locClass( $this->configArray[ $this->params['moveConfigIndex'] ] );
-        $thisProxyUrl = $this->config['thisProxyUrl'];
-        $objKey = $this->params['name'];
-        if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
-            $this->sendDataToStartMove( );
-        } else {
-            $this->sendStartMoveCmd( $locator );
+        $error500Msg = "error when starting a move operation.";
+        set_error_handler( array( $this, "handleMoveStartError") );
+        try{
+            $locator = new $locClass( $this->configArray[ $this->params['moveConfigIndex'] ] );
+            $thisProxyUrl = $this->config['thisProxyUrl'];
+            $objKey = $this->params['name'];
+            if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
+                $this->sendDataToStartMove( );
+            } else {
+                $this->sendStartMoveCmd( $locator );
+            }
+        } catch( Exception $e ){
+            error_log("error while starting a move operation for file ".$this->params['name']." data".$e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500($error500Msg);
         }
+        restore_error_handler();
 
     }
     
@@ -325,7 +356,8 @@ class PHPDFS
     public function getData(){
         $finalPath = $this->finalPath;
         $config = $this->config;
-        if( file_exists( $finalPath) ){
+        $iAmATarget = $this->iAmATarget();
+        if( file_exists( $finalPath) && $iAmATarget ){
             $dataFH = fopen( $finalPath, "rb" );
 
             $finfo = finfo_open( FILEINFO_MIME, $config["magicDbPath"] );
@@ -337,7 +369,7 @@ class PHPDFS
             fpassthru( $dataFH );
 
             fclose( $dataFH );
-        } else if( !$this->iAmATarget() ){
+        } else if( !$iAmATarget ){
             // get the paths, chhose one, and print a 302 redirect
             $nodes = $this->getTargetNodes();
             if( $nodes ){
@@ -439,7 +471,7 @@ class PHPDFS
      *
      * @throws PHPDFS_PutException
      */
-    protected function spoolData( $disconnect = false ){
+    protected function spoolData( ){
 
         // write stdin to a temp file
         $tmpFH = fopen($this->tmpPath, "wb");
@@ -710,6 +742,50 @@ class PHPDFS
         $forwardInfo = $this->getForwardInfo( );
         if( $forwardInfo ){
             $fh = fopen($filePath, "rb");
+            if( $fh ){
+                $size = filesize( $filePath );
+                rewind($fh);
+
+                $errNo = 0;
+                $origPosition = $forwardInfo['position'];
+                $curl = curl_init();
+                $headers = array();
+                do{
+                    $headers[0] = self::HEADER_MOVE_CONTEXT.': create';
+                    $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                    $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
+                    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+
+                    curl_setopt($curl, CURLOPT_INFILE, $fh);
+                    curl_setopt($curl, CURLOPT_INFILESIZE, $size );
+                    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "MOVE");
+                    curl_setopt($curl, CURLOPT_URL, $forwardInfo['forwardUrl']);
+                    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                    $response = curl_exec($curl);
+                    $errNo = curl_errno($curl);
+                    if( $errNo ){
+                        error_log("replica: ".$forwardInfo['replica']." - sending data for a move in create context to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                        $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
+                    }else {
+                        error_log("forwarded to start a move cmd in create context to ".$forwardInfo['forwardUrl'] );
+                    }
+                } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+                curl_close($curl);
+                fclose($fh);
+            } else {
+                $msg = "received command in start context to move ".$this->params['name']." but cannot find file!";
+                error_log($msg);
+                throw new MoveException($msg);
+            }
+        }
+    }
+
+    protected function sendDataForMove( ){
+        $filePath = $this->finalPath;
+        $forwardInfo = $this->getForwardInfo( );
+        if( $forwardInfo ){
+            $fh = fopen($filePath, "rb");
             $size = filesize( $filePath );
             rewind($fh);
 
@@ -718,9 +794,11 @@ class PHPDFS
             $curl = curl_init();
             $headers = array();
             do{
-                $headers[0] = self::HEADER_MOVE_CONTEXT.': create';
-                $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
-                $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
+                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
+                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
+                $headers[2] = self::HEADER_MOVE_CONTEXT.': create';
+                $headers[3] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                $headers[4] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
 
                 curl_setopt($curl, CURLOPT_INFILE, $fh);
@@ -735,7 +813,7 @@ class PHPDFS
                     error_log("replica: ".$forwardInfo['replica']." - sending data for a move in create context to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }else {
-                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in create context to ".$forwardInfo['forwardUrl'] );
+                    error_log("replica ".$forwardInfo['replica']." : copied data and forwarded a move cmd in create context to ".$forwardInfo['forwardUrl'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
