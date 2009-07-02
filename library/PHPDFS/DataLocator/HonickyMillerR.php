@@ -308,4 +308,8 @@ class PHPDFS_DataLocator_HonickyMillerR
         }
         return $isTarget;
     }
+
+    public function getReplicationDegree(){
+        return $this->replicationDegree;
+    }
 }

@@ -110,7 +110,7 @@ class PHPDFS
      *
      * @var <array>
      */
-    protected $arrayConfig = null;
+    protected $configArray = null;
 
     /**
      * holds the config data for this instantiation
@@ -214,23 +214,23 @@ class PHPDFS
      */
 
     public function __construct( $configArray, $params ){
-        
+        $this->configArray = $configArray;
         $this->params = $params;
         // the configIndex tells us which config to use for this request
         // it is initially passed to us via the header Phpdfs-Config-Index
         // we need this value because we need to hve a "history" of configs to
         // accommodate automatic movement of data.
         $configIndex = $this->params['configIndex'];
-        $this->config = $configArray[ $configIndex ];
+        $this->config = $this->configArray[ $configIndex ];
 
         require_once( $this->config['locatorClassPath'] );
         $locatorClassName = $this->config['locatorClassName'];
 
         $this->locator = new $locatorClassName( $this->config );
 
-        $this->finalDir = join( $configArray['pathSeparator'], array($this->config['storageRoot'], $this->params['pathHash'] ) );
-        $this->finalPath = join( $configArray['pathSeparator'], array( $this->finalDir, $this->params['fileName'] ) );
-        $this->tmpPath = join( $configArray['pathSeparator'], array($this->config['tmpRoot'], uuid_create()));
+        $this->finalDir = join( $this->configArray['pathSeparator'], array($this->config['storageRoot'], $this->params['pathHash'] ) );
+        $this->finalPath = join( $this->configArray['pathSeparator'], array( $this->finalDir, $this->params['fileName'] ) );
+        $this->tmpPath = join( $this->configArray['pathSeparator'], array($this->config['tmpRoot'], uuid_create()));
     }
 
 
@@ -278,6 +278,7 @@ class PHPDFS
             if( $context == 'start' ){
                 $this->doStartForMove();
             } else if( $context == 'create' ){
+                error_log( "received a move action in create context ".print_r( $this, 1) );
                 //$this->doCreateForMove();
             } else if( $context == 'delete' ) {
                 //$this->doDeleteForMove();
@@ -300,14 +301,13 @@ class PHPDFS
         // here we make a new locator instance and use it to locate the old data
         require_once( $this->config['locatorClassPath'] );
         $locClass = $this->config['locatorClassName'];
-        $locator = new $locClass( $this->arrayConfig[ $this->params['moveConfigIndex'] ] );
+        $locator = new $locClass( $this->configArray[ $this->params['moveConfigIndex'] ] );
         $thisProxyUrl = $this->config['thisProxyUrl'];
         $objKey = $this->params['name'];
-        if( $locator->isTargetNodeForObj( $thisProxyUrl, $objKey ) ){
+        if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
             $this->sendDataForMove( );
         } else {
-            $nodes = $locator->findNodes( $objKey );
-            $this->sendStartMoveCmd( $nodes );
+            $this->sendStartMoveCmd( $locator );
         }
 
     }
@@ -490,7 +490,7 @@ class PHPDFS
 
             $deleted = unlink( $this->tmpPath );
             if( !$deleted ){
-                // throw exception if the copy failed
+                // throw exception if the delete failed
                 throw new PHPDFS_PutException("could not unlink ".$this->tmpPath);
             }
         }
@@ -548,7 +548,7 @@ class PHPDFS
             }
         } else {
             $forwardInfo = array(
-                'forwardUrl' => join('/', array($targetNodes[$position]['proxyUrl'], $filename ) ),
+                'forwardUrl' => join('/', array( $targetNodes[$position]['proxyUrl'], $filename ) ),
                 'position' => $position,
                 'replica' => $replica,
             );
@@ -622,6 +622,7 @@ class PHPDFS
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            curl_close($curl);
         }
     }
 
@@ -667,12 +668,15 @@ class PHPDFS
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            curl_close($curl);
             fclose($fh);
         }
     }
 
-    protected function sendStartMoveCmd( $nodes ){
-        $forwardInfo = $this->getForwardInfo( );
+    protected function sendStartMoveCmd( $locator ){
+        $nodes = $locator->findNodes( $this->params['name'] );
+        $replicationDegree = $locator->getReplicationDegree();
+        $forwardInfo = $this->getForwardInfo( null, null, $replicationDegree, $nodes );
         if( $forwardInfo ){
             $errNo = 0;
             $origPosition = $forwardInfo['position'];
@@ -694,11 +698,12 @@ class PHPDFS
                 $errNo = curl_errno($curl);
                 if( $errNo ){
                     error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd in start context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
-                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
+                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'], $replicationDegree, $nodes );
                 } else {
                     error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in start context to ".$forwardInfo['forwardUrl'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            curl_close($curl);
         }
     }
 
@@ -737,6 +742,7 @@ class PHPDFS
                     error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in create context to ".$forwardInfo['forwardUrl'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            curl_close($curl);
             fclose($fh);
         }
     }
