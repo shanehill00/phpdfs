@@ -279,8 +279,8 @@ class PHPDFS
             if( $context == 'start' ){
                 $this->doStartForMove();
             } else if( $context == 'create' ){
-                error_log( "received a move action in create context ".print_r( $this->params, 1) );
-                //$this->doCreateForMove();
+                //error_log( "received a move action in create context ".print_r( $this->params, 1) );
+                $this->doCreateForMove();
             } else if( $context == 'delete' ) {
                 //$this->doDeleteForMove();
             }
@@ -323,10 +323,9 @@ class PHPDFS
     protected function doStartForMove(){
         // here we make a new locator instance and use it to locate the old data
         require_once( $this->config['locatorClassPath'] );
-        $locClass = $this->config['locatorClassName'];
-        $error500Msg = "error when starting a move operation.";
         set_error_handler( array( $this, "handleMoveStartError") );
         try{
+            $locClass = $this->config['locatorClassName'];
             $locator = new $locClass( $this->configArray[ $this->params['moveConfigIndex'] ] );
             $thisProxyUrl = $this->config['thisProxyUrl'];
             $objKey = $this->params['name'];
@@ -337,10 +336,9 @@ class PHPDFS
             }
         } catch( Exception $e ){
             error_log("error while starting a move operation for file ".$this->params['name']." data".$e->getMessage().' : '.$e->getTraceAsString() );
-            PHPDFS_Helper::send500($error500Msg);
+            PHPDFS_Helper::send500( "error when starting a move operation." );
         }
         restore_error_handler();
-
     }
     
     /**
