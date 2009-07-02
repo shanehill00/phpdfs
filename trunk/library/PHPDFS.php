@@ -196,10 +196,11 @@ class PHPDFS
      */
     const NO_TARGET_POSITION = -1;
 
-    const HEADER_REPLICA = 'Phpdfs-Replica';
-    const HEADER_POSITION = 'Phpdfs-Position';
-    const HEADER_MOVE_CONTEXT = 'Phpdfs-Move-Context';
-    const HEADER_CONFIG_INDEX = 'Phpdfs-Config-Index';
+    const HEADER_REPLICA           = 'Phpdfs-Replica';
+    const HEADER_POSITION          = 'Phpdfs-Position';
+    const HEADER_MOVE_CONTEXT      = 'Phpdfs-Move-Context';
+    const HEADER_MOVE_CONFIG_INDEX = 'Phpdfs-Move-Config-Index';
+    const HEADER_CONFIG_INDEX      = 'Phpdfs-Config-Index';
 
     const MOVE_CONTEXT_START = 'start';
     const MOVE_CONTEXT_CREATE = 'create';
