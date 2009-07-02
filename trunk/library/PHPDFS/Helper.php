@@ -66,6 +66,7 @@ class PHPDFS_Helper {
             'replica' => 0,
             'position' => null,
             'configIndex' => 0,
+            'moveConfigIndex' => 0,
             'moveContext' => PHPDFS::MOVE_CONTEXT_START,
         );
         if( isset( $_SERVER['PATH_INFO'] ) ){
@@ -94,6 +95,10 @@ class PHPDFS_Helper {
 
             if( isset( $headers[ PHPDFS::HEADER_MOVE_CONTEXT ] ) ){
                 $params['moveContext'] = $headers[ PHPDFS::HEADER_MOVE_CONTEXT ];
+            }
+
+            if( isset( $headers[ PHPDFS::HEADER_MOVE_CONFIG_INDEX ] ) ){
+                $params['moveConfigIndex'] = $headers[ PHPDFS::HEADER_MOVE_CONFIG_INDEX ];
             }
         }
         return $params;
