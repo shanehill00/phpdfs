@@ -121,7 +121,7 @@ class PHPDFS_Helper {
         $pathSuffix[] = substr( $pathSuffixHash, 2, 2 );
         $pathSuffix[] = substr( $pathSuffixHash, 4, 2 );
         $pathSuffix[] = substr( $pathSuffixHash, 6, 2 );
-        $pathSuffix = join( $c['pathSeparator'], $pathSuffix );
+        $pathSuffix = join( '/', $pathSuffix );
         return $pathSuffix;
     }
 

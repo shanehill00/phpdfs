@@ -231,9 +231,10 @@ class PHPDFS
 
         $this->locator = new $locatorClassName( $this->config );
 
-        $this->finalDir = join( $this->configArray['pathSeparator'], array($this->config['storageRoot'], $this->params['pathHash'] ) );
-        $this->finalPath = join( $this->configArray['pathSeparator'], array( $this->finalDir, $this->params['fileName'] ) );
-        $this->tmpPath = join( $this->configArray['pathSeparator'], array($this->config['tmpRoot'], uuid_create()));
+        $pathSeparator = '/';
+        $this->finalDir = join( $pathSeparator, array($this->config['storageRoot'], $this->params['pathHash'] ) );
+        $this->finalPath = join( $pathSeparator, array( $this->finalDir, $this->params['fileName'] ) );
+        $this->tmpPath = join( $pathSeparator, array($this->config['tmpRoot'], uuid_create()));
     }
 
 

@@ -29,7 +29,6 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 return array(
             // architecture specific
-            'pathSeparator' => '/',
             'autoMove' => false,
             'magicDbPath' => '/sw/share/file/magic',
             'disconnectAfterSpooling' => true,
