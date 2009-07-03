@@ -170,23 +170,6 @@ class PHPDFS
     protected $targetNodes = null;
 
     /**
-     * an assoc array keyed of of proxy url where the value
-     * of each element is the position of the proxyUrl
-     * in the target node list
-     * 
-     * @var <array>
-     */
-    protected $positionByUrl = null;
-
-    /**
-     * int indicating which position
-     * this node is in in he target node list
-     *
-     * @var <int>
-     */
-    protected $nodePosition = null;
-
-    /**
      *
      * integer value that indicates that
      * we do not have a position in the list
