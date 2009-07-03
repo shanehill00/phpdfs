@@ -30,6 +30,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 return array(
             // architecture specific
             'pathSeparator' => '/',
+            'autoMove' => false,
             array(
                 'disconnectAfterSpooling' => true,
                 'locatorClassName' => 'PHPDFS_DataLocator_HonickyMillerR',

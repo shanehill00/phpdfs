@@ -199,6 +199,7 @@ class PHPDFS
 
     const HEADER_REPLICA           = 'Phpdfs-Replica';
     const HEADER_POSITION          = 'Phpdfs-Position';
+    const HEADER_GET_CONTEXT       = 'Phpdfs-Get-Context';
     const HEADER_MOVE_CONTEXT      = 'Phpdfs-Move-Context';
     const HEADER_MOVE_CONFIG_INDEX = 'Phpdfs-Move-Config-Index';
     const HEADER_CONFIG_INDEX      = 'Phpdfs-Config-Index';
@@ -207,6 +208,7 @@ class PHPDFS
     const MOVE_CONTEXT_CREATE = 'create';
     const MOVE_CONTEXT_DELETE = 'delete';
 
+    const GET_CONTEXT_AUTOMOVE = 'autoMove';
     /**
      *
      * @param <type> $locator
@@ -414,30 +416,103 @@ class PHPDFS
      * if the data is supposed to be here. ah but wait we might not have the data
      */
     public function getData(){
-        $finalPath = $this->finalPath;
+        $filePath = $this->finalPath;
         $config = $this->config;
         $iAmATarget = $this->iAmATarget();
-        if( file_exists( $finalPath) && $iAmATarget ){
-            $dataFH = fopen( $finalPath, "rb" );
+        if( $iAmATarget ){
+            $dataFH = '';
+            if( file_exists( $filePath) ){
+                $dataFH = fopen( $filePath, "rb" );
+            } else {
+                // we have a miss
+                // we need to iterate the config array until we find
+                // a node that has the data and then initiate a move
+                // with the correct configIndex
+                // if we cannot find file then we return a 404
+                if( $this->params['getContext'] != self::GET_CONTEXT_AUTOMOVE
+                     && isset( $this->configArray['autoMove'] )
+                      && $this->configArray['autoMove'] )
+                {
+                    $dataFH = $this->autoMove();
+                    $filePath = $this->tmpPath;
+                }
+            }
 
-            $finfo = finfo_open( FILEINFO_MIME, $config["magicDbPath"] );
-            $contentType = finfo_file( $finfo, $finalPath );
-            finfo_close( $finfo );
+            if( $dataFH ){
+                $finfo = finfo_open( FILEINFO_MIME, $config["magicDbPath"] );
+                $contentType = finfo_file( $finfo, $filePath );
+                finfo_close( $finfo );
 
-            header( "Content-Type: $contentType");
-            header( "Content-Length: ".filesize( $finalPath ) );
-            fpassthru( $dataFH );
+                rewind( $dataFH );
+                header( "Content-Type: $contentType");
+                header( "Content-Length: ".filesize( $filePath ) );
+                fpassthru( $dataFH );
 
-            fclose( $dataFH );
-        } else if( !$iAmATarget ){
-            // get the paths, chhose one, and print a 302 redirect
+                fclose( $dataFH );
+                if( $this->tmpPath == $filePath ){
+                    // we do this to remove the temp file we retrieved
+                    // when we got a miss
+                    unlink( $filePath );
+                }
+
+            } else {
+                PHPDFS_Helper::send404( $this->params['name'] );
+            }
+        } else {
+            // get the paths, choose one, and print a 301 redirect
             $nodes = $this->getTargetNodes();
             if( $nodes ){
-                PHPDFS_Helper::send301( $nodes[0]['proxyUrl'].'/'.$this->params['name'] );
+                srand();
+                $whichNode = rand( 0, count( $nodes ) - 1 );
+                PHPDFS_Helper::send301( $nodes[ $whichNode ]['proxyUrl'].'/'.$this->params['name'] );
             }
-        } else{
-            PHPDFS_Helper::send404( $this->params['name'] );
         }
+    }
+
+    /**
+     * autoMove will attempt to find the data we are looking for
+     * and download it to a temp file and return an open file handle
+     * ready for reading
+     * 
+     * we also initiate a move if we successfully find the data
+     *
+     */
+    protected function autoMove(){
+        $fh = null;
+        $totalConfigs = ( count( $this->configArray ) - 2 );
+        $headers = array();
+        $headers[0] = self::HEADER_GET_CONTEXT.': '.self::GET_CONTEXT_AUTOMOVE;
+        for( $configIndex = 1; $configIndex < $totalConfigs; $configIndex++ ){
+            $moveFromConfig = $this->configArray[ $configIndex ];
+            $locClass = $moveFromConfig['locatorClassName'];
+            $locator = new $locClass( $moveFromConfig );
+            $filename = $this->params['name'];
+            $nodes = $locator->findNodes( $filename );
+            foreach( $nodes as $node ){
+                if( $node['proxyUrl'] != $this->config['thisProxyUrl'] ){
+                    $url = $node['proxyUrl'].'/'.$filename;
+                    $curl = curl_init();
+                    $fh = fopen( $this->tmpPath, "wb+" );
+                    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+                    curl_setopt($curl, CURLOPT_FILE, $fh);
+                    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($curl, CURLOPT_HEADER, false);
+                    curl_setopt($curl, CURLOPT_URL, $url);
+                    curl_setopt($curl, CURLOPT_FAILONERROR, true);
+                    curl_setopt($curl, CURLOPT_BINARYTRANSFER, true);
+                    curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+                    curl_exec($curl);
+                    if( !curl_errno($curl) ){
+                        error_log("facilitating auto move");
+                        $this->sendStartMoveCmd( $locator, $configIndex );
+                        break 2;
+                    }
+                    fclose( $fh );
+                    $fh = null;
+                }
+            }
+        }
+        return $fh;
     }
 
     protected function handleSpoolError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
@@ -780,7 +855,7 @@ class PHPDFS
         $nodes = $locator->findNodes( $this->params['name'] );
         $replicationDegree = $locator->getReplicationDegree();
         $position = $this->getTargetNodePosition( $nodes );
-        $forwardInfo = $this->getForwardInfo( null, null, $replicationDegree, $nodes );
+        $forwardInfo = $this->getForwardInfo( 0, $position, $replicationDegree, $nodes );
         
         if( $forwardInfo ){
             $errNo = 0;
@@ -791,6 +866,8 @@ class PHPDFS
                 $headers[0] = self::HEADER_MOVE_CONTEXT.': delete';
                 // here we have to switch the config index headers so that
                 // we start the correct path for deletion
+                // so notice that we are setting the moveConfig to our current config value
+                // and we are setting the current config to be the moveConfig value
                 $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['configIndex'];
                 $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
@@ -809,6 +886,8 @@ class PHPDFS
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
+        } else {
+            error_log("could not start a delete for move.  it appears as if the forwardInfo is empty");
         }
     }
 
@@ -844,7 +923,12 @@ class PHPDFS
         }
     }
     
-    protected function sendStartMoveCmd( $locator ){
+    protected function sendStartMoveCmd( $locator, $moveConfigIndex = null ){
+        
+        if( is_null( $moveConfigIndex ) ){
+            $moveConfigIndex = $this->params['moveConfigIndex'];
+        }
+
         $nodes = $locator->findNodes( $this->params['name'] );
         $replicationDegree = $locator->getReplicationDegree();
         $forwardInfo = $this->getForwardInfo( null, null, $replicationDegree, $nodes );
@@ -855,7 +939,7 @@ class PHPDFS
             $headers = array();
             do{
                 $headers[0] = self::HEADER_MOVE_CONTEXT.': start';
-                $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$moveConfigIndex;
                 $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
 
@@ -869,7 +953,7 @@ class PHPDFS
                     error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd in start context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'], $replicationDegree, $nodes );
                 } else {
-                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in start context to ".$forwardInfo['forwardUrl'] );
+                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in start context to ".$forwardInfo['forwardUrl']." moveConfigIndex: ".$this->params['moveConfigIndex']." configIndex: ". $this->params['configIndex'] );
                 }
             } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
