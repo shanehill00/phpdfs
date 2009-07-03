@@ -127,14 +127,16 @@ class PHPDFS_Helper {
 
     public static function disconnectClient() {
         if(self::$clientGone) return;
-        // use a 204 no content header
-        header( $_SERVER['SERVER_PROTOCOL']." 204 No Content" ) ;
-        if( ob_get_length() ){
-            ob_end_clean();
+        if( isset( self::$config['disconnectAfterSpooling'] ) && self::$config['disconnectAfterSpooling'] ){
+            // use a 204 no content header
+            header( $_SERVER['SERVER_PROTOCOL']." 204 No Content" ) ;
+            if( ob_get_length() ){
+                ob_end_clean();
+            }
+            header("Content-Length: 0");
+            session_write_close();
+            self::$clientGone = true;
         }
-        header("Content-Length: 0");
-        session_write_close();
-        self::$clientGone = true;
     }
     
     public static function send500( $msg ) {
