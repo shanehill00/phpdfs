@@ -512,6 +512,10 @@ class PHPDFS
                 }
             }
         }
+        if( $fh ){
+            fclose( $fh );
+            $fh = fopen( $this->tmpPath, "rb" );
+        }
         return $fh;
     }
 
