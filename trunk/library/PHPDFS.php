@@ -224,7 +224,7 @@ class PHPDFS
         // we need this value because we need to hve a "history" of configs to
         // accommodate automatic movement of data.
         $configIndex = $this->params['configIndex'];
-        $this->config = $this->configArray[ $configIndex ];
+        $this->config = $this->configArray['data'][ $configIndex ];
 
         require_once( $this->config['locatorClassPath'] );
         $locatorClassName = $this->config['locatorClassName'];
@@ -300,7 +300,7 @@ class PHPDFS
             // old config and the current config at configIndex = 0
             // if we are a target in both configs then we take no action
             // we just send the delte on to the next node
-            $currentConfig = $this->configArray[ 0 ];
+            $currentConfig = $this->configArray['data'][ 0 ];
             $locClass = $currentConfig['locatorClassName'];
             $locator = new $locClass( $currentConfig );
             $currentNodes = $locator->findNodes( $this->params['name'] );
@@ -340,7 +340,7 @@ class PHPDFS
             // old config and the current config at configIndex = 0
             // if we are a target in both configs then we take no action
             // we just send the delte on to the next node
-            $oldConfig = $this->configArray[ $this->params['moveConfigIndex'] ];
+            $oldConfig = $this->configArray['data'][ $this->params['moveConfigIndex'] ];
             $locClass = $oldConfig['locatorClassName'];
             $locator = new $locClass( $oldConfig );
             $oldNodes = $locator->findNodes( $this->params['name'] );
@@ -390,7 +390,7 @@ class PHPDFS
         set_error_handler( array( $this, "handleMoveStartError") );
         try{
             $locClass = $this->config['locatorClassName'];
-            $locator = new $locClass( $this->configArray[ $this->params['moveConfigIndex'] ] );
+            $locator = new $locClass( $this->configArray['data'][ $this->params['moveConfigIndex'] ] );
             $thisProxyUrl = $this->config['thisProxyUrl'];
             $objKey = $this->params['name'];
             if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
@@ -479,11 +479,11 @@ class PHPDFS
      */
     protected function autoMove(){
         $fh = null;
-        $totalConfigs = ( count( $this->configArray ) - 2 );
+        $totalConfigs = count( $this->configArray['data'] );
         $headers = array();
         $headers[0] = self::HEADER_GET_CONTEXT.': '.self::GET_CONTEXT_AUTOMOVE;
         for( $configIndex = 1; $configIndex < $totalConfigs; $configIndex++ ){
-            $moveFromConfig = $this->configArray[ $configIndex ];
+            $moveFromConfig = $this->configArray['data'][ $configIndex ];
             $locClass = $moveFromConfig['locatorClassName'];
             $locator = new $locClass( $moveFromConfig );
             $filename = $this->params['name'];
@@ -849,7 +849,7 @@ class PHPDFS
      * @param <type>
      */
     protected function startDeleteForMove( ){
-        $deleteForMoveConfig = $this->configArray[ $this->params['moveConfigIndex'] ];
+        $deleteForMoveConfig = $this->configArray['data'][ $this->params['moveConfigIndex'] ];
         $locClass = $deleteForMoveConfig['locatorClassName'];
         $locator = new $locClass( $deleteForMoveConfig );
         $nodes = $locator->findNodes( $this->params['name'] );
