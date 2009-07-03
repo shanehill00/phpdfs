@@ -111,14 +111,14 @@ class PHPDFS
      *
      * @var <array>
      */
-    protected $configArray = null;
+    protected $config = null;
 
     /**
      * holds the config data for this instantiation
      *
      * @var <array>
      */
-    protected $config = null;
+    protected $dataConfig = null;
 
     /**
      * the data locator that is used for looking up the
@@ -216,25 +216,25 @@ class PHPDFS
      * @param <type> $params
      */
 
-    public function __construct( $configArray, $params ){
-        $this->configArray = $configArray;
+    public function __construct( $config, $params ){
+        $this->config = $config;
         $this->params = $params;
         // the configIndex tells us which config to use for this request
         // it is initially passed to us via the header Phpdfs-Config-Index
         // we need this value because we need to hve a "history" of configs to
         // accommodate automatic movement of data.
         $configIndex = $this->params['configIndex'];
-        $this->config = $this->configArray['data'][ $configIndex ];
+        $this->dataConfig = $this->config['data'][ $configIndex ];
 
-        require_once( $this->config['locatorClassPath'] );
-        $locatorClassName = $this->config['locatorClassName'];
+        require_once( $this->dataConfig['locatorClassPath'] );
+        $locatorClassName = $this->dataConfig['locatorClassName'];
 
-        $this->locator = new $locatorClassName( $this->config );
+        $this->locator = new $locatorClassName( $this->dataConfig );
 
         $pathSeparator = '/';
-        $this->finalDir = join( $pathSeparator, array($this->config['storageRoot'], $this->params['pathHash'] ) );
+        $this->finalDir = join( $pathSeparator, array($this->dataConfig['storageRoot'], $this->params['pathHash'] ) );
         $this->finalPath = join( $pathSeparator, array( $this->finalDir, $this->params['fileName'] ) );
-        $this->tmpPath = join( $pathSeparator, array($this->config['tmpRoot'], uuid_create()));
+        $this->tmpPath = join( $pathSeparator, array($this->dataConfig['tmpRoot'], uuid_create()));
     }
 
 
@@ -301,14 +301,14 @@ class PHPDFS
             // old config and the current config at configIndex = 0
             // if we are a target in both configs then we take no action
             // we just send the delte on to the next node
-            $currentConfig = $this->configArray['data'][ 0 ];
+            $currentConfig = $this->config['data'][ 0 ];
             $locClass = $currentConfig['locatorClassName'];
             $locator = new $locClass( $currentConfig );
             $currentNodes = $locator->findNodes( $this->params['name'] );
             if( !$this->iAmATarget( $currentNodes ) ){
                 $this->_deleteData();
             } else {
-                error_log("nodes were alike in delete for ".$this->configArray['thisProxyUrl'] );
+                error_log("nodes were alike in delete for ".$this->config['thisProxyUrl'] );
             }
             $this->sendDeleteForMove();
         } catch( Exception $e ){
@@ -341,7 +341,7 @@ class PHPDFS
             // old config and the current config at configIndex = 0
             // if we are a target in both configs then we take no action
             // we just send the delte on to the next node
-            $oldConfig = $this->configArray['data'][ $this->params['moveConfigIndex'] ];
+            $oldConfig = $this->config['data'][ $this->params['moveConfigIndex'] ];
             $locClass = $oldConfig['locatorClassName'];
             $locator = new $locClass( $oldConfig );
             $oldNodes = $locator->findNodes( $this->params['name'] );
@@ -349,7 +349,7 @@ class PHPDFS
                 $this->spoolData();
                 $this->saveData();
             }else {
-                error_log("nodes were alike in create for ".$this->configArray['thisProxyUrl'] );
+                error_log("nodes were alike in create for ".$this->config['thisProxyUrl'] );
             }
             $this->sendDataForMove();
             // now we need to check if this is the last node to receive the data for a move
@@ -387,12 +387,12 @@ class PHPDFS
      */
     protected function doStartForMove(){
         // here we make a new locator instance and use it to locate the old data
-        require_once( $this->config['locatorClassPath'] );
+        require_once( $this->dataConfig['locatorClassPath'] );
         set_error_handler( array( $this, "handleMoveStartError") );
         try{
-            $locClass = $this->config['locatorClassName'];
-            $locator = new $locClass( $this->configArray['data'][ $this->params['moveConfigIndex'] ] );
-            $thisProxyUrl = $this->configArray['thisProxyUrl'];
+            $locClass = $this->dataConfig['locatorClassName'];
+            $locator = new $locClass( $this->config['data'][ $this->params['moveConfigIndex'] ] );
+            $thisProxyUrl = $this->config['thisProxyUrl'];
             $objKey = $this->params['name'];
             
             if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
@@ -419,7 +419,7 @@ class PHPDFS
      */
     public function getData(){
         $filePath = $this->finalPath;
-        $config = $this->config;
+        $config = $this->dataConfig;
         $iAmATarget = $this->iAmATarget();
         if( $iAmATarget ){
             $dataFH = '';
@@ -432,8 +432,8 @@ class PHPDFS
                 // with the correct configIndex
                 // if we cannot find file then we return a 404
                 if( $this->params['getContext'] != self::GET_CONTEXT_AUTOMOVE
-                     && isset( $this->configArray['autoMove'] )
-                      && $this->configArray['autoMove'] )
+                     && isset( $this->config['autoMove'] )
+                      && $this->config['autoMove'] )
                 {
                     $dataFH = $this->autoMove();
                     $filePath = $this->tmpPath;
@@ -441,7 +441,7 @@ class PHPDFS
             }
 
             if( $dataFH ){
-                $finfo = finfo_open( FILEINFO_MIME, $this->configArray["magicDbPath"] );
+                $finfo = finfo_open( FILEINFO_MIME, $this->config["magicDbPath"] );
                 $contentType = finfo_file( $finfo, $filePath );
                 finfo_close( $finfo );
 
@@ -481,17 +481,17 @@ class PHPDFS
      */
     protected function autoMove(){
         $fh = null;
-        $totalConfigs = count( $this->configArray['data'] );
+        $totalConfigs = count( $this->config['data'] );
         $headers = array();
         $headers[0] = self::HEADER_GET_CONTEXT.': '.self::GET_CONTEXT_AUTOMOVE;
         for( $configIndex = 1; $configIndex < $totalConfigs; $configIndex++ ){
-            $moveFromConfig = $this->configArray['data'][ $configIndex ];
+            $moveFromConfig = $this->config['data'][ $configIndex ];
             $locClass = $moveFromConfig['locatorClassName'];
             $locator = new $locClass( $moveFromConfig );
             $filename = $this->params['name'];
             $nodes = $locator->findNodes( $filename );
             foreach( $nodes as $node ){
-                if( $node['proxyUrl'] != $this->configArray['thisProxyUrl'] ){
+                if( $node['proxyUrl'] != $this->config['thisProxyUrl'] ){
                     $url = $node['proxyUrl'].'/'.$filename;
                     $curl = curl_init();
                     $fh = fopen( $this->tmpPath, "wb+" );
@@ -669,7 +669,7 @@ class PHPDFS
 
         // solve replicationDegree value
         if( is_null( $replicationDegree ) ){
-            $replicationDegree = $this->config['replicationDegree'];
+            $replicationDegree = $this->dataConfig['replicationDegree'];
         }
 
         // obtain targetNodes for the
@@ -740,7 +740,7 @@ class PHPDFS
 
     protected function getTargetNodePosition( $nodes = null, $proxyUrl = null ){
         if( !$proxyUrl ){
-            $proxyUrl = $this->configArray['thisProxyUrl'];
+            $proxyUrl = $this->config['thisProxyUrl'];
         }
 
         if( !$nodes ){
@@ -850,7 +850,7 @@ class PHPDFS
      * @param <type>
      */
     protected function startDeleteForMove( ){
-        $deleteForMoveConfig = $this->configArray['data'][ $this->params['moveConfigIndex'] ];
+        $deleteForMoveConfig = $this->config['data'][ $this->params['moveConfigIndex'] ];
         $locClass = $deleteForMoveConfig['locatorClassName'];
         $locator = new $locClass( $deleteForMoveConfig );
         $nodes = $locator->findNodes( $this->params['name'] );
