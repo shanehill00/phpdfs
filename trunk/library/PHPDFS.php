@@ -282,11 +282,43 @@ class PHPDFS
                 //error_log( "received a move action in create context ".print_r( $this->params, 1) );
                 $this->doCreateForMove();
             } else if( $context == 'delete' ) {
-                //$this->doDeleteForMove();
+                $this->doDeleteForMove();
             }
         }
     }
 
+    protected function handleMoveDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+    }
+    
+    protected function doDeleteForMove(){
+        set_error_handler( array( $this, "handleMoveDeleteError") );
+        try{
+            // check to see if we are a target node in both the
+            // old config and the current config at configIndex = 0
+            // if we are a target in both configs then we take no action
+            // we just send the delte on to the next node
+            $currentConfig = $this->configArray[ 0 ];
+            $locClass = $currentConfig['locatorClassName'];
+            $locator = new $locClass( $currentConfig );
+            $currentNodes = $locator->findNodes( $this->params['name'] );
+            if( !$this->iAmATarget( $currentNodes ) ){
+                $this->_deleteData();
+            } else {
+                error_log("nodes were alike in delete for ".$this->config['thisProxyUrl'] );
+            }
+            $this->sendDeleteForMove();
+        } catch( Exception $e ){
+            error_log("error while deleting a file for a move operation for file ".$this->params['name']." data".$e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500( "error when deleting a file in a move operation." );
+        }
+        restore_error_handler();
+    }
+
+    protected function handleMoveCreateError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+    }
+    
     /**
      * called when we are in create context for a move operation
      *
@@ -300,9 +332,39 @@ class PHPDFS
      */
 
     protected function doCreateForMove(){
-        $this->spoolData( );
-        $this->saveData( );
-        $this->sendDataForMove();
+        set_error_handler( array( $this, "handleMoveCreateError") );
+        try{
+            // check to see if we are a target node in both the
+            // old config and the current config at configIndex = 0
+            // if we are a target in both configs then we take no action
+            // we just send the delte on to the next node
+            $oldConfig = $this->configArray[ $this->params['moveConfigIndex'] ];
+            $locClass = $oldConfig['locatorClassName'];
+            $locator = new $locClass( $oldConfig );
+            $oldNodes = $locator->findNodes( $this->params['name'] );
+            if( !$this->iAmATarget( $oldNodes ) ){
+                $this->spoolData();
+                $this->saveData();
+            }else {
+                error_log("nodes were alike in create for ".$this->config['thisProxyUrl'] );
+            }
+            $this->sendDataForMove();
+            // now we need to check if this is the last node to receive the data for a move
+            // by calling for the forwardData.  if the forwardata is empty then we assume we are the last node
+            // and start the deleteForMove process
+            // which means that we need to set the config index to the same value
+            // as the moveConfigIndex so that we start the propagation of the delete
+            // down the correct chain
+            error_log("finished move checking if we are the last node in the replication chain");
+            if( !$this->getForwardInfo() ){
+                error_log("starting delete for move");
+                $this->startDeleteForMove();
+            }
+        } catch( Exception $e ){
+            error_log("error while creating a file for a move operation for file ".$this->params['name']." data".$e->getMessage().' : '.$e->getTraceAsString() );
+            PHPDFS_Helper::send500( "error when copying during a move operation." );
+        }
+        restore_error_handler();
     }
 
 
@@ -617,6 +679,7 @@ class PHPDFS
         foreach( $nodes as $node ){
             if($node['proxyUrl'] == $proxyUrl ){
                 $position = $n;
+                break;
             }
             $n++;
         }
@@ -703,6 +766,84 @@ class PHPDFS
         }
     }
 
+    /**
+     * here is where we start the delete process during a move operation.
+     * this will only be called after the file in question has been moved to
+     * all of its new locations (nodes, servers, etc.)
+     *
+     * @param <type>
+     */
+    protected function startDeleteForMove( ){
+        $deleteForMoveConfig = $this->configArray[ $this->params['moveConfigIndex'] ];
+        $locClass = $deleteForMoveConfig['locatorClassName'];
+        $locator = new $locClass( $deleteForMoveConfig );
+        $nodes = $locator->findNodes( $this->params['name'] );
+        $replicationDegree = $locator->getReplicationDegree();
+        $position = $this->getTargetNodePosition( $nodes );
+        $forwardInfo = $this->getForwardInfo( null, null, $replicationDegree, $nodes );
+        
+        if( $forwardInfo ){
+            $errNo = 0;
+            $origPosition = $forwardInfo['position'];
+            $curl = curl_init();
+            $headers = array();
+            do{
+                $headers[0] = self::HEADER_MOVE_CONTEXT.': delete';
+                // here we have to switch the config index headers so that
+                // we start the correct path for deletion
+                $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['configIndex'];
+                $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+
+                curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "MOVE");
+                curl_setopt($curl, CURLOPT_URL, $forwardInfo['forwardUrl'] );
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($curl);
+                $errNo = curl_errno($curl);
+                if( $errNo ){
+                    error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd (start) in delete context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'], $replicationDegree, $nodes );
+                } else {
+                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd (start) in delete context to ".$forwardInfo['forwardUrl'] );
+                }
+            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            curl_close($curl);
+        }
+    }
+
+    protected function sendDeleteForMove( ){
+        $forwardInfo = $this->getForwardInfo();
+        if( $forwardInfo ){
+            $errNo = 0;
+            $origPosition = $forwardInfo['position'];
+            $curl = curl_init();
+            $headers = array();
+            do{
+                $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
+                $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
+                $headers[2] = self::HEADER_MOVE_CONTEXT.': delete';
+                $headers[3] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
+                $headers[4] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
+                curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
+
+                curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "MOVE");
+                curl_setopt($curl, CURLOPT_URL, $forwardInfo['forwardUrl'] );
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                $response = curl_exec($curl);
+                $errNo = curl_errno($curl);
+                if( $errNo ){
+                    error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd in delete context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                    $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
+                } else {
+                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in delete context to ".$forwardInfo['forwardUrl'] );
+                }
+            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            curl_close($curl);
+        }
+    }
+    
     protected function sendStartMoveCmd( $locator ){
         $nodes = $locator->findNodes( $this->params['name'] );
         $replicationDegree = $locator->getReplicationDegree();
