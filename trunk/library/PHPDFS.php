@@ -307,7 +307,7 @@ class PHPDFS
             if( !$this->iAmATarget( $currentNodes ) ){
                 $this->_deleteData();
             } else {
-                error_log("nodes were alike in delete for ".$this->config['thisProxyUrl'] );
+                error_log("nodes were alike in delete for ".$this->configArray['thisProxyUrl'] );
             }
             $this->sendDeleteForMove();
         } catch( Exception $e ){
@@ -348,7 +348,7 @@ class PHPDFS
                 $this->spoolData();
                 $this->saveData();
             }else {
-                error_log("nodes were alike in create for ".$this->config['thisProxyUrl'] );
+                error_log("nodes were alike in create for ".$this->configArray['thisProxyUrl'] );
             }
             $this->sendDataForMove();
             // now we need to check if this is the last node to receive the data for a move
@@ -391,8 +391,9 @@ class PHPDFS
         try{
             $locClass = $this->config['locatorClassName'];
             $locator = new $locClass( $this->configArray['data'][ $this->params['moveConfigIndex'] ] );
-            $thisProxyUrl = $this->config['thisProxyUrl'];
+            $thisProxyUrl = $this->configArray['thisProxyUrl'];
             $objKey = $this->params['name'];
+            
             if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
                 $this->sendDataToStartMove( );
             } else {
@@ -439,7 +440,7 @@ class PHPDFS
             }
 
             if( $dataFH ){
-                $finfo = finfo_open( FILEINFO_MIME, $config["magicDbPath"] );
+                $finfo = finfo_open( FILEINFO_MIME, $this->configArray["magicDbPath"] );
                 $contentType = finfo_file( $finfo, $filePath );
                 finfo_close( $finfo );
 
@@ -489,7 +490,7 @@ class PHPDFS
             $filename = $this->params['name'];
             $nodes = $locator->findNodes( $filename );
             foreach( $nodes as $node ){
-                if( $node['proxyUrl'] != $this->config['thisProxyUrl'] ){
+                if( $node['proxyUrl'] != $this->configArray['thisProxyUrl'] ){
                     $url = $node['proxyUrl'].'/'.$filename;
                     $curl = curl_init();
                     $fh = fopen( $this->tmpPath, "wb+" );
@@ -601,12 +602,6 @@ class PHPDFS
 
     /*
      * get the data from stdin and put it in a temp file
-     * we will disconnect the client at this point if we are configured to do so
-     * otherwise we hang on to the client, which in most cases is really bad
-     * because you might stay connected until the replication chain is completed.
-     * (depending on how the other nodes are configured of course)
-     *
-     * @param <boolean> $disconnect
      *
      * @throws PHPDFS_PutException
      */
@@ -622,9 +617,6 @@ class PHPDFS
         fclose($tmpFH);
         fclose($putData);
 
-        if( isset( $this->config['disconnectAfterSpooling'] ) && $this->config['disconnectAfterSpooling'] ){
-            PHPDFS_Helper::disconnectClient();
-        }
     }
 
     /**
@@ -656,7 +648,7 @@ class PHPDFS
 
             if(  !copy( $this->tmpPath, $this->finalPath ) ){
                 // throw exception if the copy failed
-                throw new Exception("final copy operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
+                throw new PHPDFS_PutException("final copy operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
             }
 
             $deleted = unlink( $this->tmpPath );
@@ -747,7 +739,7 @@ class PHPDFS
 
     protected function getTargetNodePosition( $nodes = null, $proxyUrl = null ){
         if( !$proxyUrl ){
-            $proxyUrl = $this->config['thisProxyUrl'];
+            $proxyUrl = $this->configArray['thisProxyUrl'];
         }
 
         if( !$nodes ){
@@ -779,6 +771,8 @@ class PHPDFS
             $origPosition = $forwardInfo['position'];
             $curl = curl_init();
             $headers = array();
+            // disconnect before we make another request
+            PHPDFS_Helper::disconnectClient();
             do{
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
@@ -822,6 +816,8 @@ class PHPDFS
             $origPosition = $forwardInfo['position'];
             $curl = curl_init();
             $headers = array();
+            // disconnect before we make another request
+            PHPDFS_Helper::disconnectClient();
             do{
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
@@ -866,6 +862,8 @@ class PHPDFS
             $origPosition = $forwardInfo['position'];
             $curl = curl_init();
             $headers = array();
+            // disconnect before we make another request
+            PHPDFS_Helper::disconnectClient();
             do{
                 $headers[0] = self::HEADER_MOVE_CONTEXT.': delete';
                 // here we have to switch the config index headers so that
@@ -902,6 +900,8 @@ class PHPDFS
             $origPosition = $forwardInfo['position'];
             $curl = curl_init();
             $headers = array();
+            // disconnect before we make another request
+            PHPDFS_Helper::disconnectClient();
             do{
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
@@ -941,6 +941,8 @@ class PHPDFS
             $origPosition = $forwardInfo['position'];
             $curl = curl_init();
             $headers = array();
+            // disconnect before we make another request
+            PHPDFS_Helper::disconnectClient();
             do{
                 $headers[0] = self::HEADER_MOVE_CONTEXT.': start';
                 $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$moveConfigIndex;
@@ -977,6 +979,8 @@ class PHPDFS
                 $origPosition = $forwardInfo['position'];
                 $curl = curl_init();
                 $headers = array();
+                // disconnect before we make another request
+                PHPDFS_Helper::disconnectClient();
                 do{
                     $headers[0] = self::HEADER_MOVE_CONTEXT.': create';
                     $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
@@ -1021,6 +1025,8 @@ class PHPDFS
             $origPosition = $forwardInfo['position'];
             $curl = curl_init();
             $headers = array();
+            // disconnect before we make another request
+            PHPDFS_Helper::disconnectClient();
             do{
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
