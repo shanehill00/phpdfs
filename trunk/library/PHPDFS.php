@@ -753,7 +753,8 @@ class PHPDFS
                     $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
                     $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
                     curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
-
+                    
+                    curl_setopt($curl, CURLOPT_UPLOAD, true);
                     curl_setopt($curl, CURLOPT_INFILE, $fh);
                     curl_setopt($curl, CURLOPT_INFILESIZE, $size );
                     curl_setopt($curl, CURLOPT_TIMEOUT, 10);
@@ -766,7 +767,7 @@ class PHPDFS
                         error_log("replica: ".$forwardInfo['replica']." - sending data for a move in create context to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
                         $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                     }else {
-                        error_log("forwarded to start a move cmd in create context to ".$forwardInfo['forwardUrl'] );
+                        error_log("forwarded $filePath to start a move cmd in create context to ".$forwardInfo['forwardUrl'] );
                     }
                 } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
                 curl_close($curl);
@@ -799,6 +800,7 @@ class PHPDFS
                 $headers[4] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
 
+                curl_setopt($curl, CURLOPT_UPLOAD, true);
                 curl_setopt($curl, CURLOPT_INFILE, $fh);
                 curl_setopt($curl, CURLOPT_INFILESIZE, $size );
                 curl_setopt($curl, CURLOPT_TIMEOUT, 10);
