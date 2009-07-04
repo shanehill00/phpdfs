@@ -191,7 +191,7 @@ class PHPDFS
     const MOVE_CONTEXT_CREATE = 'create';
     const MOVE_CONTEXT_DELETE = 'delete';
 
-    const GET_CONTEXT_AUTOMOVE = 'autoMove';
+    const GET_CONTEXT_AUTOMOVE = 'automove';
     /**
      *
      * @param <type> $locator
