@@ -38,7 +38,7 @@ return array(
                     'locatorClassName' => 'PHPDFS_DataLocator_HonickyMillerR',
                     'locatorClassPath' => 'PHPDFS/DataLocator/HonickyMillerR.php',
 
-                    'storageRoot' => '/tmp/testData',
+                    'storageRoot' => '/tmp/tempData',
                     'tmpRoot' => '/tmp/testData',
 
                     //  node and cluster config below
