@@ -79,6 +79,7 @@ class PHPDFS_Helper {
             // get the last element of the path info
             $params['fileName'] = split( '/', $params['name'] );
             $params['fileName'] = array_pop( $params['fileName'] );
+            str_replace( array('/','\\',':','*','?','|','<','>','"','%'),"", $params['fileName'] );
 
             // hash the path info
             $params['pathHash'] = self::getPathHash( $params['name'] );
@@ -86,15 +87,15 @@ class PHPDFS_Helper {
             $headers = http_get_request_headers();
 
             if( isset( $headers[ PHPDFS::HEADER_REPLICA ] ) ){
-                $params['replica'] = $headers[ PHPDFS::HEADER_REPLICA ];
+                $params['replica'] = (int) $headers[ PHPDFS::HEADER_REPLICA ];
             }
 
             if( isset( $headers[ PHPDFS::HEADER_POSITION ] ) ){
-                $params['position'] = $headers[ PHPDFS::HEADER_POSITION ];
+                $params['position'] = (int) $headers[ PHPDFS::HEADER_POSITION ];
             }
 
             if( isset( $headers[ PHPDFS::HEADER_CONFIG_INDEX ] ) ){
-                $params['configIndex'] = $headers[ PHPDFS::HEADER_CONFIG_INDEX ];
+                $params['configIndex'] = (int) $headers[ PHPDFS::HEADER_CONFIG_INDEX ];
             }
 
             if( isset( $headers[ PHPDFS::HEADER_MOVE_CONTEXT ] ) ){
@@ -102,7 +103,7 @@ class PHPDFS_Helper {
             }
 
             if( isset( $headers[ PHPDFS::HEADER_MOVE_CONFIG_INDEX ] ) ){
-                $params['moveConfigIndex'] = $headers[ PHPDFS::HEADER_MOVE_CONFIG_INDEX ];
+                $params['moveConfigIndex'] = (int) $headers[ PHPDFS::HEADER_MOVE_CONFIG_INDEX ];
             }
 
             if( isset( $headers[ PHPDFS::HEADER_GET_CONTEXT ] ) ){
