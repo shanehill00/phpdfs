@@ -101,7 +101,10 @@ class PHPDFS_Client{
         $paths = array();
         $nodes = $this->locator->findNodes( $fileId );
         foreach( $nodes as $node ){
-            $paths[]['url'] = $node['proxyUrl'].'/'.$fileId;
+            $data = array();
+            $data['url'] = $node['proxyUrl'].'/'.$fileId;
+            $data['proxyUrl'] = $node['proxyUrl'];
+            $paths[] = $data;
         }
         return $paths;
     }

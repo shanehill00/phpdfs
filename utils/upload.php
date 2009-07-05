@@ -30,14 +30,12 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 require_once 'PHPDFS/Client.php';
 require_once 'PHPDFS/Helper.php';
 
-if( isset( $_SERVER['REQUEST_METHOD'] ) && strtolower( $_SERVER['REQUEST_METHOD'] ) == 'post' ){
-
+if( $_SERVER['REQUEST_METHOD'] == 'POST' ){
     handleUpload();
-
+} else if( isset($_GET['delete']) ) {
+    deleteFile( $_GET['delete'] );
 } else {
-
     showForm();
-
 }
 
 function showForm(){
@@ -66,17 +64,55 @@ function showForm(){
 function handleUpload(){
 
     if( isset($_FILES['datafile']['tmp_name'])){
+        // first create the PHPDFS client.
+        $config = PHPDFS_Helper::getConfig();
+        $client = new PHPDFS_Client( $config );
+
+        // set the uploaded file in PHPDFS
         $filepath = $_FILES['datafile']['tmp_name'];
         $name = $_POST['name'];
-        $config = PHPDFS_Helper::getConfig();
-        $phpdfsc = new PHPDFS_Client( $config );
-        $phpdfsc->set($name, $filepath);
-        $paths = $phpdfsc->getPaths( $name );
+        $client->set($name, $filepath);
+
+        // now get the urls where the file
+        // can be found
+        $paths = $client->getPaths( $name );
+        $urls = array();
         foreach( $paths as $path ){
             $url = $path['url'];
-            echo("<a href='$url'>$url</a><br>");
-
+            $urls[] = "<a href='$url'>$url</a> --- <a href='?delete=$name'>delete $name</a><br>";
         }
+        showMessage($urls);
     }
 
 }
+
+function deleteFile( $name ){
+    $config = PHPDFS_Helper::getConfig();
+    $client = new PHPDFS_Client( $config );
+    $client->delete($name);
+
+    echo("$name was deleted. woo hoo!<br>try accessing the URLs below.<br><br>\n");
+
+    $paths = $client->getPaths( $name );
+    $urls = array();
+    foreach( $paths as $path ){
+        $url = $path['url'];
+        echo "<a href='$url'>$url</a><br>\n";
+    }
+}
+
+function showMessage($urls){
+    $urls = join("<br>", $urls );
+    echo("
+        <html>
+        <body>
+        below are the URLs where you can find the image you just uploaded.  woo hoo!
+        <p>
+        $urls
+        </p>
+        </body>
+        </html>
+    ");
+
+}
+
