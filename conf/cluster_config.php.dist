@@ -28,21 +28,84 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 return array(
-            // architecture specific
+            // autoMove tells PHPDFS whther or not to automatically move data
+            // when the configs change and a GET cannot find data.
+            // if this value evaluates to true, then whenever PHPDFS cannot find
+            // a file for a GET request, it will look in the old location (if there is an old location)
+            // and if it can find it there it will move it from the
+            // old location to the new location and return the image to the client.
+            // if automove is false then a 404 is returned to the client if PHPDFS
+            // cannot find the requested file
             'autoMove' => false,
+
+            //  the path that the fileinfo extension will use to identify
             'magicDbPath' => '/sw/share/file/magic',
+
+            // this setting will tell PHPDFS to disconnect the client
+            // after key points in propagation of an action.
+            //
+            // For example we disconnect the client before continung with replicating
+            // an uploaded file so that the client will NOT hang on and wait for us to complete
+            // communication with a completely different node.
             'disconnectAfterSpooling' => true,
-            'thisProxyUrl' =>  'http://192.168.0.2:80/dfs.php',
+
+            // The url for THIS node which is mapped to the dfs.php file.
+            // This can be a direct access or maybe something like an apache rewrite rule.
+            // This is the url to which all of the PUTs, GETs, MOVEs and DELETEs are sent.
+            'thisProxyUrl' =>  'http://192.168.0.2:80/phpdfs',
+
+            // the data portion of the config is the part that is used for mapping objects to nodes
+            // the data element holds an array of configs where the config located at index 0 is the most current
+            // config in use and the other configs are prior configs.
+            //
+            // some of the reasons you might be adding a new config entry are:
+            //
+            // * when you add or remove servers
+            // * you need to change the weighting between clusters
+            // * you are changing to new Locator algorithm
             'data' => array(
                 array(
+
+                    // The class name of the locator class to be used for this data config
                     'locatorClassName' => 'PHPDFS_DataLocator_HonickyMillerR',
+
+                    // the path to the file that comntains the locatorClassName class code
                     'locatorClassPath' => 'PHPDFS/DataLocator/HonickyMillerR.php',
 
+                    // this is the directory where files will be stored permanently
+                    // this directory should be writable and readable by the webserver
+                    // this directory needs to be created by you.  PHPDFS will not create it.
                     'storageRoot' => '/tmp/testData',
+
+                    // this is the directory where files will be stored temporarily
+                    // for example, when we are accepting an upload, or when we are getting a file
+                    // from a remote node to fulfill a GET request.
+                    //
+                    // this directory should be writable and readable by the webserver
+                    // this directory needs to be created by you.  PHPDFS will not create it.
                     'tmpRoot' => '/tmp/tempData',
 
-                    //  node and cluster config below
+                    // this is the number iof replicants to make
+                    // this number CANNOT exceed the number of nodes
+                    // in the first cluster of the cluster config below
+                    // the check_reqs.php file will check your config
+                    // to be sure that this value is appropriate
                     'replicationDegree' => 2,
+
+                    // the clusters config is an array where each element contains
+                    // an array which contains two keys:
+                    //      weight - this is the weight given to this cluster (not a particular node)
+                    //               if you need to weight a single server, then you need to create a
+                    //               cluster for that server alone and give it a weight
+                    //
+                    //      nodes - this is an array of arrays where each nested array represents
+                    //              a server / node / storage system each node structure contains
+                    //              the information necessary for accessing that node in the system.
+                    //              currently the only key in the node structure is 'proxyUrl'.
+                    //              The characteristice of the value of the 'proxyUrl' element
+                    //              are the same as described above for the 'thisproxyUrl' element
+                    //
+                    //
                     'clusters' => array(
                         // cluster 1
                         array(
