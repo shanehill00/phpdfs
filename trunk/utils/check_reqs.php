@@ -129,12 +129,12 @@ You need pcre to be installed and working to be able to use PHPDFS
 
 function configOK( $config ){
     echo("
-=========================================
+==============================================
 || CONFIG OK!
-|| Your PHPDFS config looks ok
-|| if you find bugs or problems please report
-|| shanehill00 <<at>> gmail-com
-=========================================
+|| Your PHPDFS config looks ok.  sweet!
+|| If you find bugs or problems please report
+|| them to shanehill00 <<at>> gmail-com
+==============================================
 ");
 }
 
