@@ -243,7 +243,7 @@ Refer to the documentation to read about the config values.
                 echo("
 ERROR:
 The number of nodes in the first cluster of configuration number $whichConfig
-exceeds the replicationDegree() ".$clusterConf['replicationDegree']." for that cluster configuration.
+exceeds the replicationDegree value of ".$clusterConf['replicationDegree']." for that cluster configuration.
 This will not work and will cause a bad distribution of data
 Refer to the documentation to read about the config values.
 ==================
