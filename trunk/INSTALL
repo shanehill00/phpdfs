@@ -42,8 +42,8 @@ The steps for installing and configuring a PHPDFS node follow:
 
    5. make the utils/dfs.php file available and executable to the web.
 
-   6. copy the utils/upload.html and utils/upload.php files into your web root.
-      load the upload.html into your browser and start using PHPDFS!
+   6. copy the utils/upload.php into your web root.
+      load the upload.php into your browser and start using PHPDFS!
 
 
 =====================
