@@ -165,7 +165,7 @@ class PHPDFS_DataLocator_HonickyMillerR
 
 
         // get the starting cluster
-        $currentCluster = $totalClusters - 1;
+        $currentCluster = --$totalClusters;
 
 
         $sumRemainingNodes = $this->totalNodes;
