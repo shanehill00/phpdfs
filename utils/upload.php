@@ -30,20 +30,53 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 require_once 'PHPDFS/Client.php';
 require_once 'PHPDFS/Helper.php';
 
-ini_set('upload_max_filesize', '50m');
-ini_set('post_max_size', '50m');
+if( isset( $_SERVER['REQUEST_METHOD'] ) && strtolower( $_SERVER['REQUEST_METHOD'] ) == 'post' ){
 
-if( isset($_FILES['datafile']['tmp_name'])){
-    $filepath = $_FILES['datafile']['tmp_name'];
-    $name = $_POST['name'];
-    $config = PHPDFS_Helper::getConfig();
-    $phpdfsc = new PHPDFS_Client( $config );
-    $phpdfsc->set($name, $filepath);
-    $paths = $phpdfsc->getPaths( $name );
-    foreach( $paths as $path ){
-        $url = $path['url'];
-        echo("<a href='$url'>$url</a><br>");
+    handleUpload();
 
-    }
+} else {
+
+    showForm();
+
 }
 
+function showForm(){
+    echo('
+        <html>
+        <body>
+        <form action="/upload.php" enctype="multipart/form-data" method="post">
+        <p>
+        filename<br>
+        <input type="text" name="name" size="30">
+        </p>
+        <p>
+        Please specify a file, or a set of files:<br>
+        <input type="file" name="datafile" size="40">
+        </p>
+        <div>
+        <input type="submit" value="Send">
+        </div>
+        </form>
+        </body>
+        </html>
+    ');
+
+}
+
+function handleUpload(){
+
+    if( isset($_FILES['datafile']['tmp_name'])){
+        $filepath = $_FILES['datafile']['tmp_name'];
+        $name = $_POST['name'];
+        $config = PHPDFS_Helper::getConfig();
+        $phpdfsc = new PHPDFS_Client( $config );
+        $phpdfsc->set($name, $filepath);
+        $paths = $phpdfsc->getPaths( $name );
+        foreach( $paths as $path ){
+            $url = $path['url'];
+            echo("<a href='$url'>$url</a><br>");
+
+        }
+    }
+
+}

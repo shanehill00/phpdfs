@@ -38,7 +38,7 @@ return array(
             // cannot find the requested file
             'autoMove' => false,
 
-            //  the path that the fileinfo extension will use to identify
+            //  the path that the fileinfo extension will use
             'magicDbPath' => '/sw/share/file/magic',
 
             // this setting will tell PHPDFS to disconnect the client
