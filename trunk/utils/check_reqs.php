@@ -163,14 +163,116 @@ Refer to the documentation to read about the config values.
     }
 
     // check the cluster configs
+    $whichConfig = 0;
     foreach( $dataConfig as $clusterConf ){
         // first we check that we can load and instantiate the locator class
         require_once( $clusterConf['locatorClassPath'] );
         $locClass = $clusterConf['locatorClassName'];
         $locator = new $locClass( $clusterConf );
 
+        if( !isset( $clusterConf['clusters'] ) ){
+            echo("
+ERROR:
+Your data config does not appear to have a 'clusters' key!
+Please add a 'clusters' config to your data config
+Refer to the documentation to read about the config values.
+==================
+");
+            exit();
+        }
+        
+        if( !count( $clusterConf['clusters'] ) ){
+            echo("
+ERROR:
+Your data config 'clusters' property does not
+appear to be configured!
+Please configure the 'clusters' property.
+Refer to the documentation to read about the config values.
+==================
+");
+            exit();
+        }
+
+        $whichCluster = 0;
+        foreach( $clusterConf['clusters'] as $cluster ){
+            
+            if( !isset( $cluster['weight'] ) ){
+                echo("
+ERROR:
+Your cluster config does not appear to have a 'weight' key!
+Please add a 'weight' config to your cluster config.
+Refer to the documentation to read about the config values.
+==================
+");
+                exit();
+            }
+
+            if( $cluster['weight'] <= 0 ){
+                echo("
+ERROR:
+Your cluster weight does not appear to be correct.
+The cluster weight must be greater than 0 to be valid.
+Refer to the documentation to read about the config values.
+==================
+");
+                exit();
+            }
+
+            if( !isset( $cluster['nodes'] ) ){
+                echo("
+ERROR:
+Your cluster config does not appear to have a 'nodes' key!
+Please add a 'nodes' config to your cluster config.
+Refer to the documentation to read about the config values.
+==================
+");
+                exit();
+            }
+
+            if( !count(  $cluster['nodes'] ) ){
+                echo("
+ERROR:
+Your data config 'clusters' property does not appear to be configured!
+Please configure the 'clusters' property.
+Refer to the documentation to read about the config values.
+==================
+");
+                exit();
+            }
+            if( $whichCluster == 0 && ( count( $cluster['nodes'] ) < $clusterConf['replicationDegree'] ) ) {
+                echo("
+ERROR:
+The number of nodes in the first cluster of configuration number $whichConfig
+exceeds the replicationDegree() ".$clusterConf['replicationDegree']." for that cluster configuration.
+This will not work and will cause a bad distribution of data
+Refer to the documentation to read about the config values.
+==================
+");
+                exit();
+            }
+
+            // iterate the nodes and check the proxyUrl is valid
+            $whichNode = 0;
+            foreach( $cluster['nodes'] as $node ){
+                if( !filter_var( $node['proxyUrl'], FILTER_VALIDATE_URL ) ){
+                    echo("
+ERROR:
+The proxyUrl value for node $whichNode in cluster $whichCluster in config $whichConfig
+does not appear to be a valid URL!
+Please assign a valid URL to proxyUrl in your config.
+Refer to the documentation to read about the config values.
+==================
+");
+                    exit();
+                    
+                }
+                $whichNode++;
+            }
+
+            $whichCluster++;
+        }
+
         if( !isset( $clusterConf['tmpRoot'] ) ){
-            $tmpRoot = $clusterConf['tmpRoot'] ;
             echo("
 ERROR:
 Your data config does not appear to have a 'tmpRoot' key!
@@ -217,6 +319,7 @@ and make sure it is writable and readable by your web server.
 ");
             exit();
         }
+        $whichConfig++;
     }
     
 }
