@@ -315,10 +315,23 @@ ERROR:
 Cannot find $storageRoot.
 Please create $storageRoot
 and make sure it is writable and readable by your web server.
+Refer to the documentation to read about the config values.
 ==================
 ");
             exit();
         }
+
+        if( $clusterConf['storageRoot'] == $clusterConf['tmpRoot'] ){
+            echo("
+ERROR:
+The storage root (".$clusterConf['storageRoot'].") and the temp root (".$clusterConf['tmpRoot'].") are the same directory.
+Please choose different directories for these values
+Refer to the documentation to read about the config values.
+==================
+");
+            exit();
+        }
+
         $whichConfig++;
     }
     
