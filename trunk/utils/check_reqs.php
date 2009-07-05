@@ -1,23 +1,4 @@
 <?php
-/**
-pass the conf file on the command line
-
-we require_once the conf file
-
-print the value of the automove
-print the value of disconnectAfterSpooling
-check that the magicDbPath exists
-check that the proxyUrl is of the correct form
-make sure that there is at least one data config and that it contains at least one config array
-check that we can require the locator class and instantiate a new instance of the locator
-check that the storage and temp roots are not the same and that they are both writable
-or at least report on the writability
-
-iterate the data configs and check
-    that the replication degree does not exceed the number of nodes in the first cluster
-    check that the proxyUrl in each node is a valid url
-    check that weight is filled in with an int
-*/
 
 $config = getConfig();
 
@@ -422,7 +403,7 @@ function getConfig(){
     if( !isset( $argv[1] ) ){
         echo("
 ERROR:
-Please pass the location of the PHPDFS configuration file to be checked!
+Please pass the location of the PHPDFS configuration file to be checked as the first parameter on the command line!
 ");
         exit();
     }
