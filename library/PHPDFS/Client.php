@@ -178,9 +178,9 @@ class PHPDFS_Client{
             $errInfo = $this->errs[ $phpDfsErrCode ];
             require_once( $errInfo['classPath'] );
             $exceptionClass = $errInfo['className'];
-            $data['httpCode'] = $info['http_code'];
-            $data['url'] = $info['url'];
-            $data['contentType'] = $info['content_type'];
+            $data['httpCode'] = isset($info['http_code']) ? $info['http_code'] : '';
+            $data['url'] = isset($info['url']) ? $info['url'] : '';
+            $data['contentType'] = isset($info['content_type']) ? $info['content_type'] : '';
             $data['body'] = $additionalInfo;
             //[url] => http://www.google.com/dfgsdfgsfg
             //[content_type] => text/html; charset=ISO-8859-1
