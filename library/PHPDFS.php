@@ -475,7 +475,7 @@ class PHPDFS
             $nodes = $locator->findNodes( $filename );
             foreach( $nodes as $node ){
                 if( $node['proxyUrl'] != $this->config['thisProxyUrl'] ){
-                    $url = $node['proxyUrl'].'/'.$filename;
+                    $url = $node['proxyUrl'].'/'.urlencode($filename);
                     $curl = curl_init();
                     $fh = fopen( $this->tmpPath, "wb+" );
                     curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
