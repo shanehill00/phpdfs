@@ -31,4 +31,5 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @author Shane Hill <shanehill00@gmail.com>
  */
 
-class PHPDFS_PutException extends Exception {   }
+require_once 'PHPDFS/Exception.php';
+class PHPDFS_Exception_DeleteException extends PHPDFS_Exception {   }

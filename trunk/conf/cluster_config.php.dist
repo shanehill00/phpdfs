@@ -54,6 +54,10 @@ return array(
             // This is the url to which all of the PUTs, GETs, MOVEs and DELETEs are sent.
             'thisProxyUrl' =>  'http://192.168.0.2:80/phpdfs',
 
+            // the number of bytes to read when spooling a file to disk
+            'spoolReadSize' => 2048,
+
+
             // the data portion of the config is the part that is used for mapping objects to nodes
             // the data element holds an array of configs where the config located at index 0 is the most current
             // config in use and the other configs are prior configs.
