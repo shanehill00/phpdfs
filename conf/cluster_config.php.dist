@@ -159,6 +159,7 @@ return array(
                 'sendStartMove'   => "ERROR: replica %s : forwarding a move cmd in start context to %s failed using curl.  curl error code: %s curl error message: %s |||| response: %s",
                 'sendDataToStartMove' => "ERROR: replica: %s - sending data for a move in create context to %s via curl failed.  curl error code: %s curl error message: %s |||| response: %s",
                 'sendDataForMove' => "ERROR: replica: %s - sending data for a move in create context to %s via curl failed.  curl error code: %s curl error message: %s |||| response: %s",
+                'noNodeFound'  => "function: %s - file: %s - line: %s - iterated all of the nodes and could not find a good one.  maybe your configuration is bad. be sure to check all of the proxy urls and make sure they are correct",
             ),
               
         );

@@ -784,7 +784,13 @@ class PHPDFS
             $headers = array();
             // disconnect before we make another request
             PHPDFS_Helper::disconnectClient();
+            $loops = 0;
+            $nodeLength = count( $this->getTargetNodes( ) );
             do{
+                if( $loops >= $nodeLength ){
+                    $this->errorLog('noNodeFound',__FUNCTION__, __FILE__, __LINE__);
+                    break;
+                }
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers );
@@ -799,7 +805,8 @@ class PHPDFS
                     $this->errorLog('deleteSend', $forwardInfo['replica'], $forwardInfo['forwardUrl'], curl_errno($curl), curl_error($curl), $response );
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }
-            } while( ($errNo || $info['http_code'] >= 400) && $origPosition != $forwardInfo['position'] && $forwardInfo );
+                $loops++;
+            } while( ($errNo || $info['http_code'] >= 400) && $forwardInfo && ($origPosition != $forwardInfo['position']) );
             curl_close($curl);
         }
     }
@@ -830,7 +837,13 @@ class PHPDFS
             $headers = array();
             // disconnect before we make another request
             PHPDFS_Helper::disconnectClient();
+            $loops = 0;
+            $nodeLength = count( $this->getTargetNodes( ) );
             do{
+                if( $loops >= $nodeLength ){
+                    $this->errorLog('noNodeFound',__FUNCTION__, __FILE__, __LINE__);
+                    break;
+                }
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
                 
@@ -877,7 +890,13 @@ class PHPDFS
             $headers = array();
             // disconnect before we make another request
             PHPDFS_Helper::disconnectClient();
+            $loops = 0;
+            $nodeLength = count( $nodes );
             do{
+                if( $loops >= $nodeLength ){
+                    $this->errorLog('noNodeFound',__FUNCTION__, __FILE__, __LINE__);
+                    break;
+                }
                 $headers[0] = self::HEADER_MOVE_CONTEXT.': delete';
                 // here we have to switch the config index headers so that
                 // we start the correct path for deletion
@@ -916,7 +935,13 @@ class PHPDFS
             $headers = array();
             // disconnect before we make another request
             PHPDFS_Helper::disconnectClient();
+            $loops = 0;
+            $nodeLength = count( $this->getTargetNodes( ) );
             do{
+                if( $loops >= $nodeLength ){
+                    $this->errorLog('noNodeFound',__FUNCTION__, __FILE__, __LINE__);
+                    break;
+                }
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
                 $headers[2] = self::HEADER_MOVE_CONTEXT.': delete';
@@ -958,7 +983,13 @@ class PHPDFS
             $headers = array();
             // disconnect before we make another request
             PHPDFS_Helper::disconnectClient();
+            $loops = 0;
+            $nodeLength = count( $nodes );
             do{
+                if( $loops >= $nodeLength ){
+                    $this->errorLog('noNodeFound',__FUNCTION__, __FILE__, __LINE__);
+                    break;
+                }
                 $headers[0] = self::HEADER_MOVE_CONTEXT.': start';
                 $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$moveConfigIndex;
                 $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
@@ -997,7 +1028,13 @@ class PHPDFS
                 $headers = array();
                 // disconnect before we make another request
                 PHPDFS_Helper::disconnectClient();
+                $loops = 0;
+                $nodeLength = count( $this->getTargetNodes( ) );
                 do{
+                    if( $loops >= $nodeLength ){
+                        $this->errorLog('noNodeFound',__FUNCTION__, __FILE__, __LINE__);
+                        break;
+                    }
                     $headers[0] = self::HEADER_MOVE_CONTEXT.': create';
                     $headers[1] = self::HEADER_MOVE_CONFIG_INDEX.': '.$this->params['moveConfigIndex'];
                     $headers[2] = self::HEADER_CONFIG_INDEX.': '.$this->params['configIndex'];
@@ -1044,7 +1081,13 @@ class PHPDFS
             $headers = array();
             // disconnect before we make another request
             PHPDFS_Helper::disconnectClient();
+            $loops = 0;
+            $nodeLength = count( $this->getTargetNodes( ) );
             do{
+                if( $loops >= $nodeLength ){
+                    $this->errorLog('noNodeFound',__FUNCTION__, __FILE__, __LINE__);
+                    break;
+                }
                 $headers[0] = self::HEADER_REPLICA.': '.$forwardInfo['replica'];
                 $headers[1] = self::HEADER_POSITION.': '.$forwardInfo['position'];
                 $headers[2] = self::HEADER_MOVE_CONTEXT.': create';
