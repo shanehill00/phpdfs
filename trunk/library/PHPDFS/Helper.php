@@ -73,13 +73,13 @@ class PHPDFS_Helper {
         );
         if( isset( $_SERVER['PATH_INFO'] ) ){
             $params['name'] = trim($_SERVER['PATH_INFO'],'/');
+            $params['name'] = str_replace( array('/','\\',':','*','?','|','<','>','"','%'),"", $params['name'] );
 
             $params['action'] = strtolower( $_SERVER['REQUEST_METHOD'] );
 
             // get the last element of the path info
             $params['fileName'] = split( '/', $params['name'] );
             $params['fileName'] = array_pop( $params['fileName'] );
-            str_replace( array('/','\\',':','*','?','|','<','>','"','%'),"", $params['fileName'] );
 
             // hash the path info
             $params['pathHash'] = self::getPathHash( $params['name'] );
