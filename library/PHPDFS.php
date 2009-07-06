@@ -91,10 +91,10 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 require_once 'PHPDFS/Helper.php';
-require_once 'PHPDFS/PutException.php';
-require_once 'PHPDFS/DeleteException.php';
-require_once 'PHPDFS/GetException.php';
-require_once 'PHPDFS/MoveException.php';
+require_once 'PHPDFS/Exception/PutException.php';
+require_once 'PHPDFS/Exception/DeleteException.php';
+require_once 'PHPDFS/Exception/GetException.php';
+require_once 'PHPDFS/Exception/MoveException.php';
 
 class PHPDFS
 {
@@ -274,7 +274,7 @@ class PHPDFS
     }
 
     protected function handleMoveDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
     
     protected function doDeleteForMove(){
@@ -302,7 +302,7 @@ class PHPDFS
     }
 
     protected function handleMoveCreateError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
     
     /**
@@ -355,7 +355,7 @@ class PHPDFS
 
 
     protected function handleMoveStartError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
     /**
      *  called when we are in start context for a move operation
@@ -505,11 +505,11 @@ class PHPDFS
     }
 
     protected function handleSpoolError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
 
     protected function handleForwardDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
 
     public function putData(){
@@ -525,7 +525,7 @@ class PHPDFS
             // save the data to the appropriate directory and remove the spooled file
             // but only if we are a targetNode, otherwise DO NOTHING
             $this->saveData( );
-        } catch( PHPDFS_PutException $e ){
+        } catch( PHPDFS_Exception_PutException $e ){
             error_log("error while spooling data".$e->getMessage().' : '.$e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
             // we want to be sure to exit here because we have errored
@@ -547,7 +547,7 @@ class PHPDFS
         set_error_handler( array( $this, "handleForwardDataError") );
         try{
             $this->forwardDataForPut( );
-        } catch( PHPDFS_PutException $e ){
+        } catch( PHPDFS_Exception_PutException $e ){
             error_log(" error while forwarding data" .$e->getMessage().' : '.$e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
         }
@@ -555,11 +555,11 @@ class PHPDFS
     }
 
     protected function handleDeleteDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_DeleteException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_DeleteException( " $errno : $errmsg : $errfile : $errline " );
     }
     
     protected function handleForwardDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_DeleteException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_DeleteException( " $errno : $errmsg : $errfile : $errline " );
     }
 
     public function deleteData(){
@@ -567,7 +567,7 @@ class PHPDFS
         set_error_handler( array( $this, "handleDeleteDataError") );
         try{
             $this->_deleteData( );
-        } catch( PHPDFS_DeleteException $e ){
+        } catch( PHPDFS_Exception_DeleteException $e ){
             error_log(" error while deleting data" .$e->getMessage().' : '.$e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
         }
@@ -577,7 +577,7 @@ class PHPDFS
         set_error_handler( array( $this, "handleForwardDeleteError") );
         try{
             $this->sendDelete();
-        } catch( PHPDFS_DeleteException $e ){
+        } catch( PHPDFS_Exception_DeleteException $e ){
             error_log(" error while forwarding the delete action " .$e->getMessage().' : '.$e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
         }
@@ -595,7 +595,7 @@ class PHPDFS
         $tmpFH = fopen($this->tmpPath, "wb");
         $putData = fopen("php://input", "rb");
 
-        while ($data = fread($putData, 1024))
+        while ($data = fread($putData, $this->config['spoolReadSize'] ) )
           fwrite($tmpFH, $data);
 
         fclose($tmpFH);
@@ -616,7 +616,7 @@ class PHPDFS
             $deleted = unlink( $this->finalPath );
             if( !$deleted ){
                 // throw exception if the delete failed
-                throw new PHPDFS_PutException("could not unlink ".$this->finalPath);
+                throw new PHPDFS_Exception_PutException("could not unlink ".$this->finalPath);
             }
         }
     }
@@ -632,13 +632,13 @@ class PHPDFS
 
             if(  !copy( $this->tmpPath, $this->finalPath ) ){
                 // throw exception if the copy failed
-                throw new PHPDFS_PutException("final copy operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
+                throw new PHPDFS_Exception_PutException("final copy operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
             }
 
             $deleted = unlink( $this->tmpPath );
             if( !$deleted ){
                 // throw exception if the delete failed
-                throw new PHPDFS_PutException("could not unlink ".$this->tmpPath);
+                throw new PHPDFS_Exception_PutException("could not unlink ".$this->tmpPath);
             }
         }
     }
@@ -992,7 +992,7 @@ class PHPDFS
             } else {
                 $msg = "received command in start context to move ".$this->params['name']." but cannot find file!";
                 error_log($msg);
-                throw new MoveException($msg);
+                throw new PHPDFS_Exception_MoveException($msg);
             }
         }
     }

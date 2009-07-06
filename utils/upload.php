@@ -34,6 +34,8 @@ if( $_SERVER['REQUEST_METHOD'] == 'POST' ){
     handleUpload();
 } else if( isset($_GET['delete']) ) {
     deleteFile( $_GET['delete'] );
+} else if( isset( $_GET['get'] ) ) {
+    getFile( $_GET['get'] );
 } else {
     showForm();
 }
@@ -71,7 +73,8 @@ function handleUpload(){
         // set the uploaded file in PHPDFS
         $filepath = $_FILES['datafile']['tmp_name'];
         $name = $_POST['name'];
-        $client->set($name, $filepath);
+        
+        $client->put($name, $filepath);
 
         // now get the urls where the file
         // can be found
@@ -79,11 +82,33 @@ function handleUpload(){
         $urls = array();
         foreach( $paths as $path ){
             $url = $path['url'];
-            $urls[] = "<a href='$url'>$url</a> --- <a href='?delete=$name'>delete $name</a><br>";
+            $urls[] = "<a href='$url'>$url</a> --- <a href='?delete=$name'>delete $name (deletes all replicas)</a> -- fetch <a href='?get=$name'>$name</a> using the PHPDFS_Client<br>";
         }
         showMessage($urls);
     }
 
+}
+
+function getFile( $name ){
+    $config = PHPDFS_Helper::getConfig();
+    $client = new PHPDFS_Client( $config );
+    $data = "";
+    try{
+        $data = $client->get($name);
+        $finfo = finfo_open( FILEINFO_MIME, $config["magicDbPath"] );
+        $contentType = finfo_buffer( $finfo, $data );
+        finfo_close( $finfo );
+        header( "Content-Type: $contentType");
+        header( "Content-Length: ".strlen( $data ) );
+    } catch( PHPDFS_Exception_GetException $e ) {
+        $errData = $e->getData();
+        if( $errData['httpCode'] > 400 ){
+            header(  $_SERVER['SERVER_PROTOCOL']." ".$errData['httpCode'] ) ;
+            $data = $errData['body'];
+        }
+    }
+
+    echo( $data );
 }
 
 function deleteFile( $name ){

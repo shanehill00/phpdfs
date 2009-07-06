@@ -54,19 +54,19 @@ class PHPDFS_Client{
 
         $this->errs = array(
             self::PHPDFS_PUT_ERR => array(
-                'class' => 'PHPDFS_Client_PutException',
+                'className' => 'PHPDFS_Exception_PutException',
                 'msg'   => 'PUT Exception',
-                'require_once' => 'PHPDFS/PutException.php'
+                'classPath' => 'PHPDFS/Exception/PutException.php'
             ),
             self::PHPDFS_DELETE_ERR => array(
-                'class' => 'PHPDFS_Client_DeleteException',
+                'className' => 'PHPDFS_Exception_DeleteException',
                 'msg'   => 'DELETE Exception',
-                'require_once' => 'PHPDFS/DeleteException.php'
+                'classPath' => 'PHPDFS/Exception/DeleteException.php'
             ),
             self::PHPDFS_GET_ERR => array(
-                'class' => 'PHPDFS_Client_GetException',
+                'className' => 'PHPDFS_Exception_GetException',
                 'msg'   => 'GET Exception',
-                'require_once' => 'PHPDFS/GetException.php'
+                'classPath' => 'PHPDFS/Exception/GetException.php'
             ),
         );
     }
@@ -92,7 +92,7 @@ class PHPDFS_Client{
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
             $response = curl_exec($curl);
-            $this->checkError( $curl, self::PHPDFS_GET_ERR );
+            $this->checkError( $curl, self::PHPDFS_GET_ERR, $response );
         }
         return $response;
     }
@@ -164,13 +164,33 @@ class PHPDFS_Client{
         }
     }
 
-    protected function checkError( $curl, $phpDfsErrCode, $additionalInfo = "" ){
-        if( curl_errno($curl) ){
+    /**
+     * @param <curl> $curl
+     * @param <int> $phpDfsErrCode
+     * @param <reference> $additionalInfo
+     */
+    protected function checkError( $curl, $phpDfsErrCode, &$additionalInfo = "" ){
+        $info = curl_getinfo( $curl );
+        $isHttpErr =  isset( $info['http_code'] ) && ( $info['http_code'] >= 400 );
+        $isOtherErr = curl_errno($curl);
+        $data = array();
+        if( $isOtherErr || $isHttpErr ){
             $errInfo = $this->errs[ $phpDfsErrCode ];
-            require_once( $errInfo['require_once'] );
-            $exceptionClass = $errInfo['class'];
-            $msg = $phpDfsErrCode." - ".$errInfo['msg']. " : ".curl_errno($curl)." - " .curl_error($curl)." : $additionalInfo";
-            throw new $exceptionClass( $msg );
+            require_once( $errInfo['classPath'] );
+            $exceptionClass = $errInfo['className'];
+            $data['httpCode'] = $info['http_code'];
+            $data['url'] = $info['url'];
+            $data['contentType'] = $info['content_type'];
+            $data['body'] = $additionalInfo;
+            //[url] => http://www.google.com/dfgsdfgsfg
+            //[content_type] => text/html; charset=ISO-8859-1
+            //[http_code] => 404
+            if( $isOtherErr ){
+                $msg = $phpDfsErrCode." - ".$errInfo['msg']. " : ".curl_errno($curl)." - " .curl_error($curl)." : $additionalInfo";
+            } else {
+                $msg = "http error!";
+            }
+            throw new $exceptionClass( $msg, $data );
         }
     }
 }
