@@ -52,7 +52,7 @@ return array(
             // The url for THIS node which is mapped to the dfs.php file.
             // This can be a direct access or maybe something like an apache rewrite rule.
             // This is the url to which all of the PUTs, GETs, MOVEs and DELETEs are sent.
-            'thisProxyUrl' =>  'http://192.168.0.2:80/phpdfs',
+            'thisProxyUrl' =>  'http://192.168.0.2:80/dfs.php',
 
             // the number of bytes to read when spooling a file to disk
             'spoolReadSize' => 2048,
@@ -130,7 +130,7 @@ return array(
                   ),
               ),
 
-              // below are the error and debug message templates
+              // below are the error and debug message templates, you probably do not need to change anything below this line
             'debugMsgs' => array(
                 'moveDeleteAlike' => 'DEBUG: nodes were alike in delete for %s',
                 'moveCreateAlike' => "DEBUG: nodes were alike in create for %s",
