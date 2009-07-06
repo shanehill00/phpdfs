@@ -170,6 +170,31 @@ class PHPDFS
     protected $targetNodes = null;
 
     /**
+     * boolean inducating whther or not to log
+     * debug messages.  primarily useful for
+     * watching how a file propagates through the nodes
+     *
+     * @var <boolean>
+     */
+    protected $debug = false;
+
+    /**
+     * holds an array of debug messages
+     * 
+     * @see debugLog()
+     * @var <array>
+     */
+    protected $debugMsgs = null;
+    
+    /**
+     * holds an array of error messages
+     * 
+     * @see errorLog()
+     * @var <array> 
+     */
+    protected $errMsgs = null;
+    
+    /**
      *
      * integer value that indicates that
      * we do not have a position in the list
@@ -213,6 +238,10 @@ class PHPDFS
         $locatorClassName = $this->dataConfig['locatorClassName'];
 
         $this->locator = new $locatorClassName( $this->dataConfig );
+
+        $this->debug = $this->config['debug'];
+        $this->debugMsgs = $this->config['debugMsgs'];
+        $this->errMsgs = $this->config['errMsgs'];
 
         $pathSeparator = '/';
         $this->finalDir = join( $pathSeparator, array($this->dataConfig['storageRoot'], $this->params['pathHash'] ) );
@@ -265,7 +294,6 @@ class PHPDFS
             if( $context == 'start' ){
                 $this->doStartForMove();
             } else if( $context == 'create' ){
-                //error_log( "received a move action in create context ".print_r( $this->params, 1) );
                 $this->doCreateForMove();
             } else if( $context == 'delete' ) {
                 $this->doDeleteForMove();
@@ -274,7 +302,7 @@ class PHPDFS
     }
 
     protected function handleMoveDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( "errno: $errno - errmsg: $errmsg - errfile: $errfile - errline: $errline" );
     }
     
     protected function doDeleteForMove(){
@@ -291,12 +319,12 @@ class PHPDFS
             if( !$this->iAmATarget( $currentNodes ) ){
                 $this->_deleteData();
             } else {
-                error_log("nodes were alike in delete for ".$this->config['thisProxyUrl'] );
+                $this->debugLog('moveDeleteAlike', $this->config['thisProxyUrl'] );
             }
             $this->sendDeleteForMove();
         } catch( Exception $e ){
-            error_log("error while deleting a file for a move operation for file ".$this->params['name']." data".$e->getMessage().' : '.$e->getTraceAsString() );
-            PHPDFS_Helper::send500( "error when deleting a file in a move operation." );
+            $this->errorLog('doDeleteForMove', $this->params['action'], $this->params['moveContext'], $this->params['name'], $e->getMessage(), $e->getTraceAsString() );
+            PHPDFS_Helper::send500();
         }
         restore_error_handler();
     }
@@ -332,23 +360,22 @@ class PHPDFS
                 $this->spoolData();
                 $this->saveData();
             }else {
-                error_log("nodes were alike in create for ".$this->config['thisProxyUrl'] );
+                $this->debugLog('moveCreateAlike',$this->config['thisProxyUrl'] );
             }
             $this->sendDataForMove();
             // now we need to check if this is the last node to receive the data for a move
-            // by calling for the forwardData.  if the forwardata is empty then we assume we are the last node
+            // by calling getForwardInfo.  if the forwardata is empty then we assume we are the last node
             // and start the deleteForMove process
             // which means that we need to set the config index to the same value
             // as the moveConfigIndex so that we start the propagation of the delete
             // down the correct chain
-            error_log("finished move checking if we are the last node in the replication chain");
+            $this->debugLog('moveFinished');
             if( !$this->getForwardInfo() ){
-                error_log("starting delete for move");
                 $this->startDeleteForMove();
             }
         } catch( Exception $e ){
-            error_log("error while creating a file for a move operation for file ".$this->params['name']." data".$e->getMessage().' : '.$e->getTraceAsString() );
-            PHPDFS_Helper::send500( "error when copying during a move operation." );
+            $this->errorLog('doCreateForMove', $this->params['action'], $this->params['moveContext'], $this->params['name'], $e->getMessage(), $e->getTraceAsString() );
+            PHPDFS_Helper::send500();
         }
         restore_error_handler();
     }
@@ -381,11 +408,11 @@ class PHPDFS
             if( $this->iAmATarget( $locator->findNodes( $objKey ) ) ){
                 $this->sendDataToStartMove( );
             } else {
-                $this->sendStartMoveCmd( $locator );
+                $this->sendStartMove( $locator );
             }
         } catch( Exception $e ){
-            error_log("error while starting a move operation for file ".$this->params['name']." data".$e->getMessage().' : '.$e->getTraceAsString() );
-            PHPDFS_Helper::send500( "error when starting a move operation." );
+            $this->errorLog('doStartForMove', $this->params['action'], $this->params['moveContext'], $this->params['name'], $e->getMessage(), $e->getTraceAsString() );
+            PHPDFS_Helper::send500( );
         }
         restore_error_handler();
     }
@@ -487,9 +514,10 @@ class PHPDFS
                     curl_setopt($curl, CURLOPT_BINARYTRANSFER, true);
                     curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
                     curl_exec($curl);
-                    if( !curl_errno($curl) ){
-                        error_log("facilitating auto move");
-                        $this->sendStartMoveCmd( $locator, $configIndex );
+                    $info = curl_getinfo($curl);
+                    if( !curl_errno($curl) && $info['http_code'] < 400 ){
+                        $this->debugLog('autoMove');
+                        $this->sendStartMove( $locator, $configIndex );
                         break 2;
                     }
                     fclose( $fh );
@@ -505,15 +533,14 @@ class PHPDFS
     }
 
     protected function handleSpoolError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( "errno: $errno - errmsg: $errmsg - errfile: $errfile - errline: $errline" );
     }
 
     protected function handleForwardDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
-        throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
+        throw new PHPDFS_Exception_PutException( "errno: $errno - errmsg: $errmsg - errfile: $errfile - errline: $errline" );
     }
 
     public function putData(){
-        $error500Msg = "error when processing upload";
         set_error_handler( array( $this, "handleSpoolError") );
         try{
             // get the data from stdin and put it in a temp file
@@ -526,8 +553,8 @@ class PHPDFS
             // but only if we are a targetNode, otherwise DO NOTHING
             $this->saveData( );
         } catch( PHPDFS_Exception_PutException $e ){
-            error_log("error while spooling data".$e->getMessage().' : '.$e->getTraceAsString() );
-            PHPDFS_Helper::send500($error500Msg);
+            $this->errorLog('putData', $this->params['action'], $this->params['name'], $e->getMessage(), $e->getTraceAsString() );
+            PHPDFS_Helper::send500();
             // we want to be sure to exit here because we have errored
             // and the state of the file upload is unknown
             exit();
@@ -548,8 +575,8 @@ class PHPDFS
         try{
             $this->forwardDataForPut( );
         } catch( PHPDFS_Exception_PutException $e ){
-            error_log(" error while forwarding data" .$e->getMessage().' : '.$e->getTraceAsString() );
-            PHPDFS_Helper::send500($error500Msg);
+            $this->errorLog('putForward', $this->params['action'], $this->params['name'], $e->getMessage(), $e->getTraceAsString() );
+            PHPDFS_Helper::send500();
         }
         restore_error_handler();
     }
@@ -568,7 +595,7 @@ class PHPDFS
         try{
             $this->_deleteData( );
         } catch( PHPDFS_Exception_DeleteException $e ){
-            error_log(" error while deleting data" .$e->getMessage().' : '.$e->getTraceAsString() );
+            $this->errorLog('deleteData', $this->params['action'], $this->params['name'], $e->getMessage(), $e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
         }
         restore_error_handler();
@@ -578,7 +605,7 @@ class PHPDFS
         try{
             $this->sendDelete();
         } catch( PHPDFS_Exception_DeleteException $e ){
-            error_log(" error while forwarding the delete action " .$e->getMessage().' : '.$e->getTraceAsString() );
+            $this->errorLog('deleteForward', $this->params['action'], $this->params['name'], $e->getMessage(), $e->getTraceAsString() );
             PHPDFS_Helper::send500($error500Msg);
         }
         restore_error_handler();
@@ -767,11 +794,12 @@ class PHPDFS
                 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
                 $response = curl_exec($curl);
                 $errNo = curl_errno($curl);
-                if( $errNo ){
-                    error_log("replica ".$forwardInfo['replica']." : forwarding a delete command to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                $info = curl_getinfo($curl);
+                if( $errNo || $info['http_code'] >= 400 ){
+                    $this->errorLog('deleteSend', $forwardInfo['replica'], $forwardInfo['forwardUrl'], curl_errno($curl), curl_error($curl), $response );
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }
-            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            } while( ($errNo || $info['http_code'] >= 400) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
         }
     }
@@ -815,11 +843,12 @@ class PHPDFS
                 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
                 $response = curl_exec($curl);
                 $errNo = curl_errno($curl);
-                if( $errNo ){
-                    error_log("replica: ".$forwardInfo['replica']." - sending data to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                $info = curl_getinfo($curl);
+                if( $errNo || $info['http_code'] >= 400 ){
+                    $this->errorLog('sendDataForPut',$forwardInfo['replica'], $forwardInfo['forwardUrl'],curl_errno($curl), curl_error($curl), $response);
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }
-            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            } while(( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
             fclose($fh);
         }
@@ -864,16 +893,17 @@ class PHPDFS
                 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
                 $response = curl_exec($curl);
                 $errNo = curl_errno($curl);
-                if( $errNo ){
-                    error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd (start) in delete context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                $info = curl_getinfo($curl);
+                if( $errNo || $info['http_code'] >= 400 ){
+                    $this->errorLog('startDeleteForMove',$forwardInfo['replica'], $forwardInfo['forwardUrl'],curl_errno($curl), curl_error($curl), $response);
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'], $replicationDegree, $nodes );
                 } else {
-                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd (start) in delete context to ".$forwardInfo['forwardUrl'] );
+                    $this->debugLog('moveStartDelete', $forwardInfo['replica'], $forwardInfo['forwardUrl'] );
                 }
-            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            } while( ( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
         } else {
-            error_log("could not start a delete for move.  it appears as if the forwardInfo is empty");
+            $this->errorLog('startDeleteForMoveEmptyForward');
         }
     }
 
@@ -900,18 +930,19 @@ class PHPDFS
                 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
                 $response = curl_exec($curl);
                 $errNo = curl_errno($curl);
-                if( $errNo ){
-                    error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd in delete context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                $info = curl_getinfo($curl);
+                if( $errNo || $info['http_code'] >= 400 ){
+                    $this->errorLog('sendDeleteForMove',$forwardInfo['replica'], $forwardInfo['forwardUrl'],curl_errno($curl), curl_error($curl), $response);
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 } else {
-                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in delete context to ".$forwardInfo['forwardUrl'] );
+                    $this->debugLog('sendDeleteForMove', $forwardInfo['replica'], $forwardInfo['forwardUrl'] );
                 }
-            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            } while( ( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
         }
     }
     
-    protected function sendStartMoveCmd( $locator, $moveConfigIndex = null ){
+    protected function sendStartMove( $locator, $moveConfigIndex = null ){
         
         if( is_null( $moveConfigIndex ) ){
             $moveConfigIndex = $this->params['moveConfigIndex'];
@@ -939,13 +970,14 @@ class PHPDFS
                 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
                 $response = curl_exec($curl);
                 $errNo = curl_errno($curl);
-                if( $errNo ){
-                    error_log("replica ".$forwardInfo['replica']." : forwarding a move cmd in start context to ".$forwardInfo['forwardUrl']." failed using curl.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                $info = curl_getinfo($curl);
+                if( $errNo || $info['http_code'] >= 400 ){
+                    $this->errorLog('sendStartMove',$forwardInfo['replica'], $forwardInfo['forwardUrl'],curl_errno($curl), curl_error($curl), $response);
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'], $replicationDegree, $nodes );
                 } else {
-                    error_log("replica ".$forwardInfo['replica']." : forwarded a move cmd in start context to ".$forwardInfo['forwardUrl']." moveConfigIndex: ".$this->params['moveConfigIndex']." configIndex: ". $this->params['configIndex'] );
+                    $this->debugLog('sendStartMove', $forwardInfo['replica'], $forwardInfo['forwardUrl'], $this->params['moveConfigIndex'],$this->params['configIndex']  );
                 }
-            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            } while( ( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
         }
     }
@@ -980,13 +1012,14 @@ class PHPDFS
                     curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
                     $response = curl_exec($curl);
                     $errNo = curl_errno($curl);
-                    if( $errNo ){
-                        error_log("replica: ".$forwardInfo['replica']." - sending data for a move in create context to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                    $info = curl_getinfo($curl);
+                    if( $errNo || $info['http_code'] >= 400 ){
+                        $this->errorLog('sendDataToStartMove',$forwardInfo['replica'], $forwardInfo['forwardUrl'],curl_errno($curl), curl_error($curl), $response);
                         $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                     }else {
-                        error_log("forwarded $filePath to start a move cmd in create context to ".$forwardInfo['forwardUrl'] );
+                        $this->debugLog('sendDataToStartMove', $filePath, $forwardInfo['forwardUrl'] );
                     }
-                } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+                } while( ( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
                 curl_close($curl);
                 fclose($fh);
             } else {
@@ -1028,13 +1061,14 @@ class PHPDFS
                 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
                 $response = curl_exec($curl);
                 $errNo = curl_errno($curl);
-                if( $errNo ){
-                    error_log("replica: ".$forwardInfo['replica']." - sending data for a move in create context to ".$forwardInfo['forwardUrl']." via curl failed.  curl error code: ".curl_errno($curl)." curl error message: ".curl_error($curl)." |||| response: $response" );
+                $info = curl_getinfo($curl);
+                if( ( $errNo || $info['http_code'] >= 400 ) ){
+                    $this->errorLog('sendDataForMove',$forwardInfo['replica'], $forwardInfo['forwardUrl'],curl_errno($curl), curl_error($curl), $response);
                     $forwardInfo = $this->getForwardInfo( $forwardInfo['replica'], $forwardInfo['position'] );
                 }else {
-                    error_log("replica ".$forwardInfo['replica']." : copied data and forwarded a move cmd in create context to ".$forwardInfo['forwardUrl'] );
+                    $this->debugLog('sendDataForMove', $forwardInfo['replica'], $forwardInfo['forwardUrl'] );
                 }
-            } while( $errNo && $origPosition != $forwardInfo['position'] && $forwardInfo );
+            } while( ( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
             fclose($fh);
         }
@@ -1051,4 +1085,21 @@ class PHPDFS
         return $isTarget;
     }
 
+    protected function debugLog(){
+        if( $this->debug ){
+            $args = func_get_args();
+            $key = $args[0];
+            $args[0] = $this->debugMsgs[ $key ];
+            $msg = call_user_func_array( "sprintf", $args );
+            error_log( $msg );
+        }
+    }
+
+    protected function errorLog(){
+        $args = func_get_args();
+        $key = $args[0];
+        $args[0] = $this->errMsgs[ $key ];
+        $msg = call_user_func_array( "sprintf", $args );
+        error_log( $msg );
+    }
 }

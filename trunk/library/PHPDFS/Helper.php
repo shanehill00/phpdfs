@@ -140,7 +140,7 @@ class PHPDFS_Helper {
         }
     }
     
-    public static function send500( $msg ) {
+    public static function send500( $msg = "Internal Server Error" ) {
         if(self::$clientGone) return;
         header(  $_SERVER['SERVER_PROTOCOL'].' 500 Internal Server Error' );
         header("Content-Length: ".strlen($msg));
