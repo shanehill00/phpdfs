@@ -57,6 +57,10 @@ return array(
             // the number of bytes to read when spooling a file to disk
             'spoolReadSize' => 2048,
 
+            // whether or not to write debug messages to the error log
+            // this is mostly useful to see the propagation of an action
+            // between nodes.
+            'debug' => true,
 
             // the data portion of the config is the part that is used for mapping objects to nodes
             // the data element holds an array of configs where the config located at index 0 is the most current
