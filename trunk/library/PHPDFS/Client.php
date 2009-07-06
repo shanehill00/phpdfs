@@ -188,7 +188,7 @@ class PHPDFS_Client{
             if( $isOtherErr ){
                 $msg = $phpDfsErrCode." - ".$errInfo['msg']. " : ".curl_errno($curl)." - " .curl_error($curl)." : $additionalInfo";
             } else {
-                $msg = "http error!";
+                $msg = "http error! ".$info['http_code'];
             }
             throw new $exceptionClass( $msg, $data );
         }
