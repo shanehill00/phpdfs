@@ -76,13 +76,6 @@ class PHPDFS_DataLocator_HonickyMillerR
 
     /**
      * the prime value we use for the purpose of choosing replica locations
-     * 
-     * @var integer
-     */
-    protected $prime = 0;
-
-    /**
-     * the prime value we use for the purpose of choosing replica locations
      *
      * @var integer
      */
@@ -129,11 +122,11 @@ class PHPDFS_DataLocator_HonickyMillerR
             for( $n = 0; $n < $nodeCount; $n++ ){
                 $this->nodes[] = $cluster['nodes'][$n];
             }
-            $this->clusters[] = $nodeCount;
             $this->totalNodes += $nodeCount;
-            $this->totalNodesW += ($nodeCount * $cluster[ 'weight' ]);
+            $nodeCountW = $nodeCount * $cluster[ 'weight' ];
+            $this->totalNodesW += $nodeCountW;
+            $this->clusters[] = array('count' => $nodeCount, 'prime' => $this->getNextPositivePrime( $nodeCountW ) );
         }
-        $this->prime = $this->getNextPositivePrime( $this->totalNodes );
         $this->dataConfig = $dataConfig;
     }
     /**
@@ -148,7 +141,7 @@ class PHPDFS_DataLocator_HonickyMillerR
      *
      * @throws DataLocator_Exception
      */
-    public function findNode( $objKey, $replica = 1 ){
+    public function findNode( $objKey, $replica = 0 ){
 
         $nodeData = null;
         $clusters = $this->clusters;
@@ -197,7 +190,7 @@ class PHPDFS_DataLocator_HonickyMillerR
             $clusterData = $clusterConfig[$currentCluster];
             $weight = $clusterData['weight'];
             
-            $disksInCurrentCluster = $clusters[$currentCluster];
+            $disksInCurrentCluster = $clusters[$currentCluster]['count'];
             $sumRemainingNodes -= $disksInCurrentCluster;
             
             $disksInCurrentClusterW = $disksInCurrentCluster * $weight;
@@ -216,9 +209,10 @@ class PHPDFS_DataLocator_HonickyMillerR
             $rand = rand( 0, ($sumRemainingNodesW + $disksInCurrentClusterW - 1) );
 
             // create a bijection here by using the prime we solved at construction time
-            $randB = ( $rand + $replica * $this->prime ) % ( $sumRemainingNodesW + $disksInCurrentClusterW );
+            $prime = $clusters[$currentCluster]['prime'];
+            $randB = ( $rand + $replica * $prime ) % ( $sumRemainingNodesW + $disksInCurrentClusterW );
 
-            $v = $objKey + $rand + $replica * $this->prime;
+            $v = $objKey + $rand + $replica * $prime;
 
             $absNode = null;
             if( $disksInCurrentCluster >= $replicationDegree && $randB < $disksInCurrentClusterW ){
