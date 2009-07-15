@@ -306,4 +306,9 @@ class PHPDFS_DataLocator_HonickyMillerR
     public function getReplicationDegree(){
         return $this->replicationDegree;
     }
+
+    public function getTotalNodes(){
+        return $this->totalNodes;
+    }
+
 }
