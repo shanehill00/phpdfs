@@ -97,13 +97,13 @@ class PHPDFS_DataLocator_RUSHrTest extends PHPUnit_Framework_TestCase
 
         $hm = new PHPDFS_DataLocator_RUSHr( $this->data_config );
 
-        $nodes = $hm->findNode( $uuid, $replicaNo );
-        
+        $nodes = $hm->findNode( $uuid );
+
         $nodeHost = $nodes[0]['proxyUrl'];
         // now we repeat the operation 10 times and see that we get the same node back each time
         $N = 10;
         for($i = 0; $i < $N; $i++){
-            $nodes2 = $hm->findNode( $uuid, $replicaNo );
+            $nodes2 = $hm->findNode( $uuid );
             $nodeHost2 = $nodes2[0]['proxyUrl'];
             $this->assertNotEquals($nodeHost,'',"nodeHost is empty.  bad joos joos!");
             $this->assertNotEquals($nodeHost2,'',"nodeHost2 is empty.  bad joos joos!");
@@ -117,8 +117,8 @@ class PHPDFS_DataLocator_RUSHrTest extends PHPUnit_Framework_TestCase
      * we loop n times and generate a uniqid and for each id we get three urls for replicas
      */
     public function testReplication(){
-        $numClusters = 1;
-        $nodesPerCluster = 3;
+        $numClusters = 2;
+        $nodesPerCluster = 2;
         $replicaCount = 3;
         $clusterToWeight = 0;
         $weight = 1;
