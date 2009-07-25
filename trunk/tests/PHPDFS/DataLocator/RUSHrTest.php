@@ -97,13 +97,14 @@ class PHPDFS_DataLocator_RUSHrTest extends PHPUnit_Framework_TestCase
 
         $hm = new PHPDFS_DataLocator_RUSHr( $this->data_config );
 
-        $node = $hm->findNode( $uuid, $replicaNo );
-        $nodeHost = $node['proxyUrl'];
+        $nodes = $hm->findNode( $uuid, $replicaNo );
+        
+        $nodeHost = $nodes[0]['proxyUrl'];
         // now we repeat the operation 10 times and see that we get the same node back each time
         $N = 10;
         for($i = 0; $i < $N; $i++){
-            $node2 = $hm->findNode( $uuid, $replicaNo );
-            $nodeHost2 = $node2['proxyUrl'];
+            $nodes2 = $hm->findNode( $uuid, $replicaNo );
+            $nodeHost2 = $nodes2[0]['proxyUrl'];
             $this->assertNotEquals($nodeHost,'',"nodeHost is empty.  bad joos joos!");
             $this->assertNotEquals($nodeHost2,'',"nodeHost2 is empty.  bad joos joos!");
             $this->assertTrue( $nodeHost == $nodeHost2, "failed consistently fetching a node got $nodeHost == $nodeHost2" );
@@ -132,12 +133,11 @@ class PHPDFS_DataLocator_RUSHrTest extends PHPUnit_Framework_TestCase
             $uuid = uniqid();
             $replicaData = array();
             $replicaNodes = array();
-
-            for( $replicaNo = 0; $replicaNo < $replicaCount; $replicaNo++ ){
-                $time = microtime(1);
-                $node = $hm->findNode( $uuid, $replicaNo );
-                $node['replicaNo'] = $replicaNo;
-                $totalTime += (microtime(1) - $time);
+            
+            $time = microtime(1);
+            $nodes = $hm->findNode( $uuid );
+            $totalTime += (microtime(1) - $time);
+            foreach( $nodes as $node ){
                 $replicaData[ $node['proxyUrl'] ] = $node;
                 $replicaNodes[] = $node;
             }
