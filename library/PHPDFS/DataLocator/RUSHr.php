@@ -185,7 +185,7 @@ class PHPDFS_DataLocator_RUSHr
             // set the seed to our set id
             srand( $objKey );
             $t = ($replicationDegree - $sumRemainingNodes) > 0 ? ($replicationDegree - $sumRemainingNodes) : 0;
-    
+
             $u = $t + $this->drawWHG(
                 $replicationDegree - $t,
                 $sumRemainingNodesW - $t,
@@ -193,8 +193,7 @@ class PHPDFS_DataLocator_RUSHr
                 $weight
             );
             if( $u > 0 ){
-                $servers = $this->choose( $u, $currentCluster, $sumRemainingNodes );
-                array_push($nodeData, $servers);
+                $servers = $this->choose( $u, $currentCluster, $sumRemainingNodes, $nodeData );
                 $replicationDegree -= $u;
             }
             if( $replicationDegree == 0 ){
@@ -240,22 +239,20 @@ def choose ( k, n )
     end for
     return r
  */
-    public function choose( $nodesToRetrieve, $currentCluster, $remainingNodes ){
-        $chosenNodes = array();
+    public function choose( $nodesToRetrieve, $currentCluster, $remainingNodes, &$nodeData ){
         $list = &$this->clusters[ $currentCluster ]['list'];
         $count = $this->clusters[ $currentCluster ]['count'];
         for( $nodeIdx = 0; $nodeIdx < $nodesToRetrieve; $nodeIdx++ ){
             $maxIdx = $count - $nodeIdx - 1;
             $randNode = rand( 0, $maxIdx );
             // swap
-            $chosenNodes[ $nodeIdx ] = $list[ $randNode ];
+            $chosen = $list[ $randNode ];
             $list[ $randNode ] = $list[ $maxIdx ];
-            $list[ $maxIdx ] = $chosenNodes[ $nodeIdx ];
+            $list[ $maxIdx ] = $chosen;
             // add the remaining nodes so we can find the node data when we are done
-            $chosenNodes[ ] = $this->nodes[$remainingNodes + $nodeIdx];
+            $nodeData[] = $this->nodes[$remainingNodes + $nodeIdx];
         }
         $this->reset( $nodesToRetrieve, $currentCluster );
-        return $chosenNodes;
     }
 
     public function findNodes( $objKey ){
@@ -287,6 +284,7 @@ def choose ( k, n )
     }
 
     public function drawWHG( $replicas, $remainingDisks, $totalDisks, $weight = 1 ){
+        if( $replicas < 1 ) return 0;
         $prob = 0;
         $totalSuccesses = $replicas;
         $sampleSize = $totalDisks - $remainingDisks;
@@ -301,7 +299,6 @@ def choose ( k, n )
             }
             $replicas--;
         }
-
         return $replicas;
     }
 
@@ -319,7 +316,6 @@ def choose ( k, n )
      */
     public function hypergeometric( $replicas, $totalDisks, $sample, $totalSuccesses ) {
         $prob = null;
-        echo("$replicas, $totalDisks, $sample, $totalSuccesses\n");
         $prob = $this->C($totalSuccesses, $replicas) * $this->C($totalDisks - $totalSuccesses, $sample - $replicas) / $this->C($totalDisks, $sample);
         return $prob;
     }
