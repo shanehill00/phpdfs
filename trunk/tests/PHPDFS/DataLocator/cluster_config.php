@@ -29,7 +29,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 $clusters = array( 'replicationDegree' => 3, 'clusters' => array() );
 
-$numNodes = 3;
+$numNodes = 2;
 $numClusters = 2;
 
 $diskNo = 0;

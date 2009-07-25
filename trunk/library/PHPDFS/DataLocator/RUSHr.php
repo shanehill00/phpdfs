@@ -193,6 +193,9 @@ class PHPDFS_DataLocator_RUSHr
                 $weight
             );
             if( $u > 0 ){
+                if($u > $disksInCurrentCluster){
+                    $u = $disksInCurrentCluster;
+                }
                 $servers = $this->choose( $u, $currentCluster, $sumRemainingNodes, $nodeData );
                 $replicationDegree -= $u;
             }
@@ -256,11 +259,7 @@ def choose ( k, n )
     }
 
     public function findNodes( $objKey ){
-        $nodes = array();
-        for( $replicaNo = 0; $replicaNo < $this->replicationDegree; $replicaNo++ ){
-            $nodes[] = $this->findNode($objKey, $replicaNo);
-        }
-        return $nodes;
+        return $this->findNode( $objKey );
     }
 
     public function isTargetNodeForObj( $nodeUrl, $objKey ){
