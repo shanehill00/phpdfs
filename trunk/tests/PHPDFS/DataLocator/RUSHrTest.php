@@ -91,7 +91,7 @@ class PHPDFS_DataLocator_RUSHrTest extends PHPUnit_Framework_TestCase
     /**
     * Test that we consistently get the same data node for the same id.
     */
-    public function YtestFindNode(){
+    public function testFindNode(){
         $uuid = 'random_file_name';
         $replicaNo = 2;
 
