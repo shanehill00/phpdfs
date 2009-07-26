@@ -183,7 +183,7 @@ class PHPDFS_DataLocator_RUSHr
             $sumRemainingNodesW -= $disksInCurrentClusterW;
 
             // set the seed to our set id
-            srand( $objKey );
+            mt_srand( $objKey );
             $t = ($replicationDegree - $sumRemainingNodes) > 0 ? ($replicationDegree - $sumRemainingNodes) : 0;
 
             $u = $t + $this->drawWHG(
@@ -247,13 +247,13 @@ def choose ( k, n )
         $count = $this->clusters[ $currentCluster ]['count'];
         for( $nodeIdx = 0; $nodeIdx < $nodesToRetrieve; $nodeIdx++ ){
             $maxIdx = $count - $nodeIdx - 1;
-            $randNode = rand( 0, $maxIdx );
+            $randNode = mt_rand( 0, $maxIdx );
             // swap
             $chosen = $list[ $randNode ];
             $list[ $randNode ] = $list[ $maxIdx ];
             $list[ $maxIdx ] = $chosen;
             // add the remaining nodes so we can find the node data when we are done
-            $nodeData[] = $this->nodes[$remainingNodes + $nodeIdx];
+            $nodeData[] = $this->nodes[$remainingNodes + $chosen];
         }
         $this->reset( $nodesToRetrieve, $currentCluster );
     }
@@ -287,7 +287,7 @@ def choose ( k, n )
         $prob = 0;
         $totalSuccesses = $replicas;
         $sampleSize = $totalDisks - $remainingDisks;
-        $draw = (rand() / getrandmax());
+        $draw = (mt_rand() / mt_getrandmax());
         $totalSuccesses = $replicas;
         $ceiling = 0;
         while( $draw > 0 && $replicas >= 0 ){
