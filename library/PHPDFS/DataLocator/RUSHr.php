@@ -100,6 +100,11 @@ class PHPDFS_DataLocator_RUSHr
      *
      */
     protected $nodes = array();
+
+    /**
+     * @param <int> $dataConfig vaue used to help seed the random number generator
+     */
+    const SEED_PARAM = 1560;
     
     public function __construct( $dataConfig ){
 
@@ -183,12 +188,12 @@ class PHPDFS_DataLocator_RUSHr
             $sumRemainingNodesW -= $disksInCurrentClusterW;
 
             // set the seed to our set id
-            mt_srand( $objKey );
+            mt_srand( $objKey + $currentCluster );
             $t = ($replicationDegree - $sumRemainingNodes) > 0 ? ($replicationDegree - $sumRemainingNodes) : 0;
 
             $u = $t + $this->drawWHG(
                 $replicationDegree - $t,
-                $sumRemainingNodesW - $t,
+                $disksInCurrentClusterW - $t,
                 $disksInCurrentClusterW + $sumRemainingNodesW - $t,
                 $weight
             );
@@ -196,6 +201,7 @@ class PHPDFS_DataLocator_RUSHr
                 if($u > $disksInCurrentCluster){
                     $u = $disksInCurrentCluster;
                 }
+                mt_srand( $objKey + $currentCluster + self::SEED_PARAM );
                 $servers = $this->choose( $u, $currentCluster, $sumRemainingNodes, $nodeData );
                 $replicationDegree -= $u;
             }
@@ -207,16 +213,6 @@ class PHPDFS_DataLocator_RUSHr
 
         return $nodeData;
     }
-
-/**
-def reset
-    for i ∈ {0, . . . , k − 1}
-        c ← an−k+i
-        if c < n − k:
-            ac ← c
-        an−k+i ← n − k + i
-    end for
- */
 
     public function reset( $nodesToRetrieve, $currentCluster ){
         $list = &$this->clusters[ $currentCluster ]['list'];
@@ -231,17 +227,6 @@ def reset
         }
     }
 
-/**
-def choose ( k, n )
-    for i = 0 to k − 1
-        generate a random integer 0 ≤ z < (n − i)
-        // swap az and an−i−1
-        ri ← az
-        az ← an−i−1
-        an−i−1 ← ri
-    end for
-    return r
- */
     public function choose( $nodesToRetrieve, $currentCluster, $remainingNodes, &$nodeData ){
         $list = &$this->clusters[ $currentCluster ]['list'];
         $count = $this->clusters[ $currentCluster ]['count'];
@@ -282,59 +267,19 @@ def choose ( k, n )
         return $this->totalNodes;
     }
 
-    public function drawWHG( $replicas, $remainingDisks, $totalDisks, $weight = 1 ){
-        if( $replicas < 1 ) return 0;
-        $prob = 0;
-        $totalSuccesses = $replicas;
-        $sampleSize = $totalDisks - $remainingDisks;
-        $draw = (mt_rand() / mt_getrandmax());
-        $totalSuccesses = $replicas;
-        $ceiling = 0;
-        while( $draw > 0 && $replicas >= 0 ){
-            $prob = $this->hypergeometric( $replicas, $totalDisks, $sampleSize, $totalSuccesses );
-            $ceiling += $prob;
-            if( $draw <= $ceiling ){
-                break;
+    public function drawWHG( $replicas, $disksInCurrentCluster, $totalDisks, $weight = 1 ){
+        $found = 0;
+        for( $i = 0; $i < $replicas; $i++ ){
+            if( $totalDisks != 0 ){
+                $z = ( mt_rand() / mt_getrandmax() );
+                $prob = ( $disksInCurrentCluster / $totalDisks );
+                if( $z <= $prob ){
+                    $found++;
+                    $disksInCurrentCluster -= $weight;
+                }
+                $totalDisks -= $weight;
             }
-            $replicas--;
         }
-        return $replicas;
+        return $found;
     }
-
-    /**
-      * N: The number of items in the population.
-      * k: The number of items in the population that are classified as successes.
-      * n: The number of items in the sample.
-      * x: The number of items in the sample that are classified as successes.
-     *
-     * @param <int> $replicas
-     * @param <int> $totalDisks
-     * @param <int> $sample
-     * @param <int> $totalSuccesses
-     * @return <int> $prob
-     */
-    public function hypergeometric( $replicas, $totalDisks, $sample, $totalSuccesses ) {
-        $prob = null;
-        $prob = $this->C($totalSuccesses, $replicas) * $this->C($totalDisks - $totalSuccesses, $sample - $replicas) / $this->C($totalDisks, $sample);
-        return $prob;
-    }
-
-    /**
-     * get the total possible unordered combinations
-     *
-     * @param  <int> $n
-     * @param  <int> $k
-     * @return <int> $total
-     */
-
-    public function C( $n, $k ){
-        $total = 1;
-        while( $k > 0 ){
-            $total *= ( $n / $k );
-            $n--;
-            $k--;
-        }
-        return $total;
-    }
-
 }
