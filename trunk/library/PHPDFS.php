@@ -246,7 +246,7 @@ class PHPDFS
         $pathSeparator = '/';
         $this->finalDir = join( $pathSeparator, array($this->dataConfig['storageRoot'], $this->params['pathHash'] ) );
         $this->finalPath = join( $pathSeparator, array( $this->finalDir, $this->params['fileName'] ) );
-        $tempFileName = dl("uuid") ? uuid_create() : uniqid("", 1);
+        $tempFileName = extension_loaded("uuid") ? uuid_create() : uniqid("", 1);
         $this->tmpPath = join( $pathSeparator, array($this->dataConfig['tmpRoot'], $tempFileName ));
     }
 
