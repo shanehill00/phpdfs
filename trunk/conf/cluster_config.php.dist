@@ -75,10 +75,10 @@ return array(
                 array(
 
                     // The class name of the locator class to be used for this data config
-                    'locatorClassName' => 'PHPDFS_DataLocator_HonickyMillerR',
+                    'locatorClassName' => 'PHPDFS_DataLocator_RUSHr',
 
                     // the path to the file that comntains the locatorClassName class code
-                    'locatorClassPath' => 'PHPDFS/DataLocator/HonickyMillerR.php',
+                    'locatorClassPath' => 'PHPDFS/DataLocator/RUSHr.php',
 
                     //=========================================================
                     // THE STORAGE AND TEMP ROOTS SHOULD NOT BE THE SAME VALUE
