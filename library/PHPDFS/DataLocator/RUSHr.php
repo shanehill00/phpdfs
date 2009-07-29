@@ -202,7 +202,7 @@ class PHPDFS_DataLocator_RUSHr
                     $u = $disksInCurrentCluster;
                 }
                 mt_srand( $objKey + $currentCluster + self::SEED_PARAM );
-                $servers = $this->choose( $u, $currentCluster, $sumRemainingNodes, $nodeData );
+                $this->choose( $u, $currentCluster, $sumRemainingNodes, $nodeData );
                 $replicationDegree -= $u;
             }
             if( $replicationDegree == 0 ){
@@ -210,7 +210,6 @@ class PHPDFS_DataLocator_RUSHr
             }
             $currentCluster--;
         }
-
         return $nodeData;
     }
 
