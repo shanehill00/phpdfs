@@ -39,7 +39,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 require_once('PHPDFS/DataLocator/Exception.php');
 
-class PHPDFS_DataLocator_HonickyMillerR
+class PHPDFS_DataLocator_RUSHp
 {
 
     /**
@@ -101,9 +101,9 @@ class PHPDFS_DataLocator_HonickyMillerR
      *  The values above are derived from the $dataConfig passed to the locator.
      *
      * @param object $dataConfig
-     * @return  DataLocator_HonickyMiller $this
+     * @return  PHPDFS_DataLocator_RUSHp $this
      *
-     * @throws DataLocator_HonickyMiller_Exception
+     * @throws PHPDFS_DataLocator_Exception
      *
      */
     protected $nodes = array();
