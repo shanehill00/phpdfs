@@ -5,7 +5,7 @@ $totalObjs = isset($argv[1]) ? $argv[1] : 1000;
 // now we loop on each config
 // and take stats on the distribution
 // and data movement
-$configs = makeConfigs( 99 );
+$configs = makeConfigs( 100 );
 
 $totalConfs = count($configs);
 $timings = array();
@@ -47,11 +47,11 @@ function makeConfigs( $numConfigs = 1 ){
                 'nodes' => $nodes,
             );
             
-            if( $weight > 1 ){
-                $weight = pow( $weight, 1.1 );
-            } else {
-                $weight = 2;
-            }
+            //if( $weight > 1 ){
+                //$weight = pow( $weight, 1.1 );
+            //} else {
+                $weight = 1;
+            //}
         }
     }
     return $configs;
