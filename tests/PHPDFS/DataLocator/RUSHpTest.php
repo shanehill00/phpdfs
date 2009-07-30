@@ -46,12 +46,12 @@ require_once 'PHPUnit/Runner/Version.php';
 require_once 'PHPUnit/TextUI/TestRunner.php';
 require_once 'PHPUnit/Util/Filter.php';
 
-require_once 'PHPDFS/DataLocator/HonickyMillerR.php';
+require_once 'PHPDFS/DataLocator/RUSHp.php';
 /**
  * @package    DataLocator
  * @subpackage UnitTests
  */
-class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
+class PHPDFS_DataLocator_RUSHpTest extends PHPUnit_Framework_TestCase
 {
     /**
      * holds the GXC_VO that is used for the tests
@@ -65,12 +65,12 @@ class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * Tests that we get a DataLocator_HonickyMiller object and that it functions as expected
+     * Tests that we get a PHPDFS_DataLocator_RUSHp object and that it functions as expected
      */
     public function testInstance()
     {
-        $hm = new PHPDFS_DataLocator_HonickyMillerR( $this->data_config );
-        $this->assertType( 'PHPDFS_DataLocator_HonickyMillerR', $hm  );
+        $hm = new PHPDFS_DataLocator_RUSHp( $this->data_config );
+        $this->assertType( 'PHPDFS_DataLocator_RUSHp', $hm  );
     }
 
    /**
@@ -81,7 +81,7 @@ class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
     {
         $badConf['clusters'] = array();
         try{
-            $hm = new PHPDFS_DataLocator_HonickyMillerR( $badConf );
+            $hm = new PHPDFS_DataLocator_RUSHp( $badConf );
             $this->fail("successfully instantiated the locator when we should have failed");
         } catch( PHPDFS_DataLocator_Exception $e){
             $this->assertType('PHPDFS_DataLocator_Exception', $e);
@@ -95,7 +95,9 @@ class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
         $uuid = 'random_file_name';
         $replicaNo = 2;
 
-        $hm = new PHPDFS_DataLocator_HonickyMillerR( $this->data_config );
+        // force the replicationn degree to be OK
+        $this->data_config['replicationDegree'] = 2;
+        $hm = new PHPDFS_DataLocator_RUSHp( $this->data_config );
 
         $node = $hm->findNode( $uuid, $replicaNo );
         $nodeHost = $node['proxyUrl'];
@@ -122,7 +124,7 @@ class PHPDFS_DataLocator_HonickyMillerTestR extends PHPUnit_Framework_TestCase
         $clusterToWeight = 0;
         $weight = 1;
 
-        $hm = new PHPDFS_DataLocator_HonickyMillerR(
+        $hm = new PHPDFS_DataLocator_RUSHp(
             $this->makeConfig($numClusters, $nodesPerCluster, $replicaCount, $clusterToWeight, $weight)
         );
 

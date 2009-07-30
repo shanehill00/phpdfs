@@ -46,12 +46,12 @@ require_once 'PHPUnit/Runner/Version.php';
 require_once 'PHPUnit/TextUI/TestRunner.php';
 require_once 'PHPUnit/Util/Filter.php';
 
-require_once 'PHPDFS/DataLocator/HonickyMiller.php';
+require_once 'PHPDFS/DataLocator/RUSHps.php';
 /**
  * @package    DataLocator
  * @subpackage UnitTests
  */
-class PHPDFS_DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
+class PHPDFS_DataLocator_RUSHpsTest extends PHPUnit_Framework_TestCase
 {
     /**
      * holds the GXC_VO that is used for the tests
@@ -65,12 +65,12 @@ class PHPDFS_DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * Tests that we get a DataLocator_HonickyMiller object and that it functions as expected
+     * Tests that we get a PHPDFS_DataLocator_RUSHps object and that it functions as expected
      */
     public function testInstance()
     {
-        $hm = new PHPDFS_DataLocator_HonickyMiller( $this->data_config );
-        $this->assertType( 'PHPDFS_DataLocator_HonickyMiller', $hm  );
+        $hm = new PHPDFS_DataLocator_RUSHps( $this->data_config );
+        $this->assertType( 'PHPDFS_DataLocator_RUSHps', $hm  );
     }
 
    /**
@@ -81,7 +81,7 @@ class PHPDFS_DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
     {
         $badConf['clusters'] = array();
         try{
-            $hm = new PHPDFS_DataLocator_HonickyMiller( $badConf );
+            $hm = new PHPDFS_DataLocator_RUSHps( $badConf );
             $this->fail("successfully instantiated the locator when we should have failed");
         } catch( PHPDFS_DataLocator_Exception $e){
             $this->assertType('PHPDFS_DataLocator_Exception', $e);
@@ -92,7 +92,8 @@ class PHPDFS_DataLocator_HonickyMillerTest extends PHPUnit_Framework_TestCase
     * Test that we consistently get the same data node for the same id.
     */
     public function testFindNode(){
-        $hm = new PHPDFS_DataLocator_HonickyMiller(  $this->data_config );
+        $totalTime = 0;
+        $hm = new PHPDFS_DataLocator_RUSHps(  $this->data_config );
         $uuid = 'random_file_name';
         $node = $hm->findNode( $uuid );
         // now we repeat the operation 10 times and see that we get the same node back each time
