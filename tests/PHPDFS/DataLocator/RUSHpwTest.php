@@ -94,8 +94,6 @@ class PHPDFS_DataLocator_RUSHpwTest extends PHPUnit_Framework_TestCase
     public function testFindNode(){
         //$uuid = uniqid();
         $uuid = 'random_file_name';
-        $replicaNo = 1;
-        $replicaMax = 3;
 
         $hm = new PHPDFS_DataLocator_RUSHpw( $this->data_config );
 
