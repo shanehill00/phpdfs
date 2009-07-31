@@ -134,8 +134,13 @@ class PHPDFS_Helper {
             if( ob_get_length() ){
                 ob_end_clean();
             }
+            header("Connection: close");
+            ob_start();
             header("Content-Length: 0");
+            ob_end_flush();
+            flush();
             session_write_close();
+            flush();
             self::$clientGone = true;
         }
     }
