@@ -97,7 +97,7 @@ return array(
                              ),
                          ),
                         array(
-                            'weight' => 4,
+                            'weight' => 1,
                             'nodes' =>array(
                                 6,7,8,9,10
                              ),
