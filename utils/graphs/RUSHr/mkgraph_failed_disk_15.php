@@ -28,6 +28,6 @@ $bplot->SetLegend('PHPDFS');
 $graph->Add($bplot);
 
 // Setup the titles
-$graph->title->Set("Replica distribution for failed disk 7");
+$graph->title->Set("Replica distribution for failed disk 15");
 // Display the graph
 $graph->Stroke();
