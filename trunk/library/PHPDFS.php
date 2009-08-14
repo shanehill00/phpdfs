@@ -657,15 +657,9 @@ class PHPDFS
                 @mkdir( $this->finalDir, 0755, true );
             }
 
-            if(  !copy( $this->tmpPath, $this->finalPath ) ){
+            if(  !rename( $this->tmpPath, $this->finalPath ) ){
                 // throw exception if the copy failed
-                throw new PHPDFS_Exception_PutException("final copy operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
-            }
-
-            $deleted = unlink( $this->tmpPath );
-            if( !$deleted ){
-                // throw exception if the delete failed
-                throw new PHPDFS_Exception_PutException("could not unlink ".$this->tmpPath);
+                throw new PHPDFS_Exception_PutException("final move operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
             }
         }
     }
