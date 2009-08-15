@@ -1,0 +1,116 @@
+Hi,  below are the instructions on how to get going.  please send all feedback to:
+
+shanehill00<<at>>gmail-com
+
+Basic requirements and extensions:
+
+PHP 5.2.0 (cli version) and greater
+
+http extension
+uuid extension
+fileinfo extension (fileinfo is installed default in PHP 5.3.0+)
+pcre extension
+filter extension
+curl extension
+
+optionally the pecl apc op-code cache can be used to speed things up but is not necessary.
+the code does chack for apc and make sme optimizations though, so using it will be of benefit
+to your phpdfs installation
+
+NOTE: something not mentioned below is that you need to start your webserver at some point. :P
+
+The steps for installing and configuring a PHPDFS node follow:
+
+=============
+||| QUICK |||
+=============
+
+   1. Get the source here:
+
+      http://code.google.com/p/phpdfs/
+
+   2. Unpack the source and make the library/ and conf/ directories available to your php include paths.
+      it is not recommended to unpack the source in the web root.
+
+   3. cd into the conf/ directory and copy the cluster_conf.php.dist file into cluster_conf.php
+      and open and edit according to the instructions inside the file. This will include creating
+      the data directories. You will read about the data directories in the cluster_conf.php file.
+
+   4. cd into the /utils directory and execute the check_reqs.php on the command line.
+      Be sure to pass the path to the configuration file as the first parameter.
+
+      For example:
+
+      % /usr/local/php5/bin/php -d include_path='.:/usr/local/php5/lib/php:/Users/shane/dev/phpdfs/library:/Users/shane/dev/phpdfs/conf' check_reqs.php /Users/shane/dev/phpdfs/conf/cluster_config.php
+
+      The above line will check the configuration file at /Users/shane/dev/phpdfs/conf/cluster_config.php for errors.
+
+      The check_reqs.php script will also check that you have all of the necessary extensions available in
+      your php environment. if the configs are ok and you created the temp and data directories, you will see
+      a message telling you that your configs are OK. if you get any errors, fix the problem and re-run the script.
+
+   5. make the utils/dfs.php file available and executable to the web. via an http config or however you like to do it.
+
+   6. copy the utils/upload.php into your web root and load the upload.php into your browser and start using PHPDFS!
+
+
+=====================
+|||| LONG WINDED ||||
+=====================
+
+   1. Download the latest, stable phpdfs source here:
+
+      http://code.google.com/p/phpdfs/
+
+   2. Unpack the source.  This can be unpacked anywhere. However, it is NOT recommended that you unpack
+      things in your web root. rather unpack them in an installation directory and symlink to the necessary
+      files or copy whatever is necessary to the web root like the dfs.php file.
+
+   3. Configure the include_path to include library/ and conf/ so the PHPDFS libs and configuration file 
+      will be found at runtime. This can be done in a myriad of ways.
+      For example, in the httpd configuration file, at runtime or as an ENV variable.
+
+   4. Create two directories.  one for storing the files,  the other for storing temp data.
+      These two directories should be different and should not lie in the same path.  For example:
+
+          * /var/phpdfs/tmp and /var/phpdfs/data ARE good choices for the temp and data dirs
+
+          * /var/phpdfs/data/tmp and /var/phpdfs/data are NOT good choices
+            for the temp and data dirs as they lie in the same path
+
+      You also need to modify the permissions on the temp and data directories
+      so that your web server has read and write access to them.
+
+   5. Now you need to configure the node. To do this, cd into the /conf directory
+      and copy the cluster_config.php.dist file into cluster_config.php.
+      Now open the new cluster_config.php that was just created in a text editor
+      and edit the values appropriately.
+      Read the file carefully as it will tell you how to set all of the config values correctly.
+
+   6. cd into the /utils directory and execute the check_reqs.php on the command line.
+      Be sure to pass the path to the configuration file as the first parameter.
+
+      For example:
+
+      % /usr/local/php5/bin/php -d include_path='.:/usr/local/php5/lib/php:/Users/shane/dev/phpdfs/library:/Users/shane/dev/phpdfs/conf' check_reqs.php /Users/shane/dev/phpdfs/conf/cluster_config.php
+
+      The above line will check the configuration file at /Users/shane/dev/phpdfs/conf/cluster_config.php for errors.
+
+      The check_reqs.php script will also check that you have all of the necessary extensions available
+      in your php environment. If the configs are ok and you created the temp and data directories, you
+      will see a message telling you that your configs are OK. if you get any errors, fix the problem and
+      re-run the script.
+
+   7. once the configs are setup and pass all the checks, you will need to make the file utils/dfs.php 
+      available and executable to the web. This is the file that acts as the proxy for phpdfs and is
+      where all of the PUTs. GETs. DELETEs and MOVEs are sent. There are several ways to map the dfs.php file.
+      You can do some sort of mapping in your httpd conf OR sym link to the utils/dfs.php file OR copy the
+      utils/dfs.php file into your web accessible directory that will execute php. I am sure you can think
+      of other ways,  the point is that the utils/dfs.php file is what executes to start a PHPDFS command
+
+   8. once the utils/dfs.php file is set up and web accessible and executable, you are ready to test the installation.
+      To do the test, copy the utils/upload.php file into your web root or some place that will allow you to access it
+      via the web. After you have copied upload.php into the appropriate locations just simply access the
+      html page and start using PHPDFS!
+
+
