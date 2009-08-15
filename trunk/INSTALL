@@ -8,10 +8,14 @@ PHP 5.2.0 (cli version) and greater
 
 http extension
 uuid extension
-fileinfo extension
+fileinfo extension (fileinfo is installed default in PHP 5.3.0+)
 pcre extension
 filter extension
 curl extension
+
+optionally the pecl apc op-code cache can be used to speed things up but is not necessary.
+the code does chack for apc and make sme optimizations though, so using it will be of benefit
+to your phpdfs installation
 
 NOTE: something not mentioned below is that you need to start your webserver at some point. :P
 

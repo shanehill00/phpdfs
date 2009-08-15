@@ -116,14 +116,7 @@ class PHPDFS_Helper {
     public static function getPathHash( $name ){
         // hash the file name
         $c = self::getConfig();
-        $pathSuffixHash = md5( $name );
-        $pathSuffix = array();
-        $pathSuffix[] = substr( $pathSuffixHash, 0, 2 );
-        $pathSuffix[] = substr( $pathSuffixHash, 2, 2 );
-        $pathSuffix[] = substr( $pathSuffixHash, 4, 2 );
-        $pathSuffix[] = substr( $pathSuffixHash, 6, 2 );
-        $pathSuffix = join( '/', $pathSuffix );
-        return $pathSuffix;
+        return substr( md5( $name ), 0, 2 );
     }
 
     public static function disconnectClient() {
