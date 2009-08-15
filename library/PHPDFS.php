@@ -617,17 +617,9 @@ class PHPDFS
      * @throws PHPDFS_PutException
      */
     protected function spoolData( ){
-
         // write stdin to a temp file
-        $tmpFH = fopen($this->tmpPath, "wb");
         $putData = fopen("php://input", "rb");
-
-        while ($data = fread($putData, $this->config['spoolReadSize'] ) )
-          fwrite($tmpFH, $data);
-
-        fclose($tmpFH);
-        fclose($putData);
-
+        file_put_contents($this->tmpPath, $putData);
     }
 
     /**
@@ -651,16 +643,32 @@ class PHPDFS
     protected function saveData( ){
         if(  $this->iAmATarget( ) ){
 
-            if( !file_exists( $this->finalDir ) ){
-                // suppress any probs in case someone
-                // else is making this directory
-                @mkdir( $this->finalDir, 0755, true );
+            if( extension_loaded("apc") ){
+                $this->apcMkdir();
+            } else {
+                if( !file_exists( $this->finalDir ) ){
+                    // suppress any probs in case someone
+                    // else is making this directory
+                    @mkdir( $this->finalDir, 0755, true );
+                }
             }
 
             if(  !rename( $this->tmpPath, $this->finalPath ) ){
                 // throw exception if the copy failed
                 throw new PHPDFS_Exception_PutException("final move operation failed when copying ".$this->tmpPath." to ".$this->finalPath );
             }
+        }
+    }
+
+    protected function apcMkdir(){
+        $knownDir = apc_fetch( $this->finalDir );
+        if( !$knownDir ){
+            if( !file_exists( $this->finalDir ) ){
+                // suppress any probs in case someone
+                // else is making this directory
+                @mkdir( $this->finalDir, 0755, true );
+            }
+            apc_store( $this->finalDir, 1 );
         }
     }
 
