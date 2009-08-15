@@ -1,8 +1,13 @@
 package phpdfstestclient;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.UUID;
@@ -78,41 +83,57 @@ public class PHPDFSTestClient extends Thread {
     private static AtomicLong totalTime = new AtomicLong(0);
 
     private static AtomicLong startTime = new AtomicLong(0);
-    private static AtomicLong endTime = new AtomicLong(0);
     private static AtomicLong wallClock = new AtomicLong(0);
 
     private Random ran = new Random();
     private HttpClient client = new HttpClient();
     private ArrayList<String> uploadedFiles = new ArrayList<String>();
     private ArrayList<String> downloadedFiles = new ArrayList<String>();
-    private String[] filesToUpload = new String[]{
-        "/tmp/40k",
-        "/tmp/50k",
-        //"/tmp/100k",
-        //"/tmp/500k",
-        //"/tmp/1m",
-        //"/tmp/3m",
-        //"/tmp/5m",
-        //"/tmp/10m",
-        //"/tmp/15m",
-        //"/tmp/20m",
-    };
+    private ArrayList<String> filesToUpload = null;
+    private ArrayList<String> baseUrls = null;
 
-    private String[] baseUrls = new String[]{
-        "http://192.168.0.11/dfs.php",
-        //"http://192.168.0.2:81/dfs81.php",
-        //"http://192.168.0.2:82/dfs82.php",
-        //"http://192.168.0.2:83/dfs83.php",
-        //"http://192.168.0.2:84/dfs84.php",
-        //"http://192.168.0.2:85/dfs85.php",
-    };
-
-    public PHPDFSTestClient( long bytesToUpload, int numThreads, int getsPerUpload ){
+    public PHPDFSTestClient( long bytesToUpload, int numThreads, int getsPerUpload, String filesToUploadFile, String baseUrlFile ){
         this.bytesToUpload = bytesToUpload;
         this.getsPerUpload = getsPerUpload;
         PHPDFSTestClient.numThreads.compareAndSet(0, numThreads);
+        filesToUpload = fileToArrayList(filesToUploadFile);
+        baseUrls = fileToArrayList(baseUrlFile);
     }
 
+    /**
+     * opens the passed file and puts each line into an array
+     * @param filename
+     * @return
+     */
+    private static ArrayList<String> fileToArrayList( String filename ){
+        ArrayList<String> lines = new ArrayList<String>();
+        try{
+            BufferedReader br = new BufferedReader( 
+                    new InputStreamReader(
+                        new FileInputStream( filename )
+                    )
+            );
+            
+            String line = null;
+            while( (line = br.readLine() ) != null ){
+                line = line.trim();
+                if( !line.startsWith("//") && line.length() > 0 ){
+                    lines.add(line);
+                }
+            }
+            
+        } catch( FileNotFoundException e ){
+            System.err.println("could not open file " + filename + " for reading! " );
+             e.printStackTrace();
+            System.exit(99);
+        } catch( IOException e ){
+            System.err.println("IOException when processing " + filename );
+             e.printStackTrace();
+            System.exit(99);
+        }
+        return lines;
+    }
+    
     /**
      * the client will alternate between uploads and downloads
      *  randomly select from the list of possible files to upload
@@ -238,9 +259,10 @@ public class PHPDFSTestClient extends Thread {
         startTime.compareAndSet(0, System.currentTimeMillis() );
         while( myTotalBytesUp < bytesToUpload ){
             // randomly select a baseurl and filename to use for an upload
-            String whichUrl = baseUrls[ran.nextInt(baseUrls.length)] + "/" + UUID.randomUUID().toString();
+            String whichUrl = baseUrls.get( ran.nextInt( baseUrls.size() ) ) + "/" + UUID.randomUUID().toString();
+
             // randomly choose a file for upload
-            String whichFile = filesToUpload[ran.nextInt(filesToUpload.length)];
+            String whichFile = filesToUpload.get( ran.nextInt( filesToUpload.size() ) );
             String fileType = "text/plain";
 
             doPut( whichUrl, whichFile, fileType );
@@ -268,10 +290,11 @@ public class PHPDFSTestClient extends Thread {
         totalTimeUp.addAndGet(myTotalTimeUp);
         totalTimeDown.addAndGet(myTotalTimeDown);
         totalTime.addAndGet(myTotalTime);
-
-        long end = endTime.getAndSet(System.currentTimeMillis());
+        long end = System.currentTimeMillis();
+        //endTime.getAndSet( end );
         wallClock.set(end - startTime.get());
 
+        /**
         System.out.println( "Report for thread " + getName() );
         System.out.println( "Requests: " );
         System.out.println( "  up: " + myTotalRequestsUp );
@@ -310,7 +333,8 @@ public class PHPDFSTestClient extends Thread {
         System.out.println( "" );
         System.out.println( "_____________________________" );
         System.out.println( "" );
-
+         */
+        System.out.println("completed " + totalRequests.get() );
         if( numThreads.decrementAndGet() == 0 ){
             System.out.println( "========= Overall Report =========" );
             System.out.println( "Requests: " );
@@ -365,14 +389,19 @@ public class PHPDFSTestClient extends Thread {
         int getsPerUpload = 1;
         int threads = 50;
         long bytesToUploadPerThread = 2048000L;
-        if( args.length == 3 ){
+        String filesToUpload = "/Users/shane/dev/phpdfs/utils/filesToUpload";
+        String baseUrls = "/Users/shane/dev/phpdfs/utils/baseUrls";
+
+        if( args.length == 5 ){
             threads = Integer.parseInt( args[0] );
             bytesToUploadPerThread = Long.parseLong( args[1] );
             getsPerUpload = Integer.parseInt( args[2] );
+            filesToUpload = args[3];
+            baseUrls = args[4];
         }
         
         for( int n = 0; n < threads; n++ ){
-            PHPDFSTestClient thw = new PHPDFSTestClient( bytesToUploadPerThread, threads, getsPerUpload );
+            PHPDFSTestClient thw = new PHPDFSTestClient( bytesToUploadPerThread, threads, getsPerUpload, filesToUpload, baseUrls );
             thw.start();
         }
     }
