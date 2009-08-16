@@ -114,9 +114,11 @@ class PHPDFS_Helper {
     }
 
     public static function getPathHash( $name ){
-        // hash the file name
         $c = self::getConfig();
-        return substr( md5( $name ), 0, 2 );
+        $pathHash = ( crc32( $name ) >> 16 ) & 0x7fff;
+        srand( $pathHash );
+        $pathHash = rand(1,10000);
+        return $pathHash;
     }
 
     public static function disconnectClient() {
