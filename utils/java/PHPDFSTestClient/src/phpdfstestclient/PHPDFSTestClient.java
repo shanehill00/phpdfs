@@ -5,6 +5,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -246,15 +248,15 @@ public class PHPDFSTestClient extends Thread {
         }
     }
 
-    /**
-     * we do the upload and download iterations until we have input
-     * more than the number of bytes passed
-     */
     public void doTest( ){
         runTest();
         writeStats();
     }
 
+    /**
+     * we do the upload and download iterations until we have input
+     * more than the number of bytes passed
+     */
     private void runTest(){
         startTime.compareAndSet(0, System.currentTimeMillis() );
         while( myTotalBytesUp < bytesToUpload ){
@@ -335,48 +337,61 @@ public class PHPDFSTestClient extends Thread {
         System.out.println( "" );
          */
         System.out.println("completed " + totalRequests.get() );
+        
         if( numThreads.decrementAndGet() == 0 ){
-            System.out.println( "========= Overall Report =========" );
-            System.out.println( "Requests: " );
-            System.out.println( "  up: " + totalRequestsUp.get() );
-            System.out.println( "  down: " + totalRequestsDown.get() );
-            System.out.println( "  total: " + totalRequests.get() );
-            System.out.println( "" );
 
-            System.out.println( "Bytes: " );
-            System.out.println( "  up: " + totalBytesUp.get() );
-            System.out.println( "  down: " + totalBytesDown.get() );
-            System.out.println( "  total: " + totalBytes.get() );
-            System.out.println( "" );
+            String report =
+             "========= Overall Report =========\n" +
+             "Requests: \n" +
+             "  up: " + totalRequestsUp.get() + "\n" +
+             "  down: " + totalRequestsDown.get() + "\n" +
+             "  total: " + totalRequests.get() + "\n" +
+             "\n" +
 
-            System.out.println( "Failures: " );
-            System.out.println( "  up: " + totalFailuresUp.get() );
-            System.out.println( "  down: " + totalFailuresDown.get() );
-            System.out.println( "  total: " + totalFailures.get() );
-            System.out.println( "" );
+             "Bytes: \n" +
+             "  up: " + totalBytesUp.get() + "\n" +
+             "  down: " + totalBytesDown.get() + "\n" +
+             "  total: " + totalBytes.get() + "\n" +
+             "\n" +
 
-            System.out.println( "Time: " );
-            System.out.println( "  up: " + totalTimeUp.get() );
-            System.out.println( "  down: " + totalTimeDown.get() );
-            System.out.println( "  total: " + (totalTimeUp.get() + totalTimeDown.get() ) );
-            System.out.println( "  wall clock: " + wallClock.get() );
-            System.out.println( "" );
+             "Failures: \n" +
+             "  up: " + totalFailuresUp.get() + "\n" +
+             "  down: " + totalFailuresDown.get() + "\n" +
+             "  total: " + totalFailures.get() + "\n" +
+             "\n" +
 
-            System.out.println( "Requests / Sec: " );
-            System.out.println( "  mean up: " + ( (float) totalRequestsUp.get() / ((float)totalTimeUp.get() / (float)1000 ) ) );
-            System.out.println( "  mean down: " + ( (float)totalRequestsDown.get() / ( (float)totalTimeDown.get() / (float)1000 ) ) ) ;
-            System.out.println( "  mean total: " + ( (float)totalRequests.get() / ((float)totalTime.get() / (float)1000 )) );
-            System.out.println( "  mean total (across all requests): " + ( (float)totalRequests.get() / ((float)wallClock.get() / (float)1000 )) );
-            System.out.println( "" );
+             "Time: \n" +
+             "  up: " + totalTimeUp.get() + "\n" +
+             "  down: " + totalTimeDown.get() + "\n" +
+             "  total: " + totalTime.get() + "\n" +
+             "  wall clock: " + wallClock.get() + "\n" +
+             "\n" +
 
-            System.out.println( "Throughput - Bytes / Sec: " );
-            System.out.println( "  mean up: " + ( (float) totalBytesUp.get() / ((float)totalTimeUp.get() / (float)1000 ) ) );
-            System.out.println( "  mean down: " + ( (float)totalBytesDown.get() / ( (float)totalTimeDown.get() / (float)1000 ) ) ) ;
-            System.out.println( "  mean total: " + ( (float)totalBytes.get() / ( (float)totalTime.get() / (float)1000 ) ) ) ;
-            System.out.println( "  mean total (across all requests): " + ( (float)totalBytes.get() / ( (float)wallClock.get() / (float)1000 ) ) ) ;
-            System.out.println( "" );
-            System.out.println( "_____________________________" );
-            System.out.println( "" );
+             "Requests / Sec: \n" +
+             "  mean up: " + ( (float) totalRequestsUp.get() / ((float)totalTimeUp.get() / (float)1000 ) ) + "\n" +
+             "  mean down: " + ( (float)totalRequestsDown.get() / ( (float)totalTimeDown.get() / (float)1000 ) ) + "\n" +
+             "  mean total: " + ( (float)totalRequests.get() / ((float)totalTime.get() / (float)1000 )) + "\n" +
+             "  mean total (across all requests): " + ( (float)totalRequests.get() / ((float)wallClock.get() / (float)1000 ) ) + "\n" +
+             "\n" +
+
+             "Throughput - Bytes / Sec: \n" +
+             "  mean up: " + ( (float) totalBytesUp.get() / ((float)totalTimeUp.get() / (float)1000 ) ) + "\n" +
+             "  mean down: " + ( (float)totalBytesDown.get() / ( (float)totalTimeDown.get() / (float)1000 ) ) + "\n" +
+             "  mean total: " + ( (float)totalBytes.get() / ( (float)totalTime.get() / (float)1000 ) ) + "\n" +
+             "  mean total (across all requests): " + ( (float)totalBytes.get() / ( (float)wallClock.get() / (float)1000 ) ) + "\n" +
+             "\n" +
+             "_____________________________\n" +
+             "\n";
+            System.out.println( report );
+            try{
+                File statsFile = new File("/tmp/phpdfs.stats.txt");
+                FileWriter stats = new FileWriter(statsFile);
+                stats.write(report);
+                stats.flush();
+            } catch( IOException e ) {
+                e.printStackTrace();
+                System.exit(99);
+            }
         }
     }
 
