@@ -53,7 +53,15 @@ class PHPDFS_Helper {
      */
     public static function getConfig( $name = "cluster_config.php" ){
         if( !self::$config || $name ){
-            self::$config = require $name;
+            if( extension_loaded("apc") ){
+                self::$config = apc_fetch("phpdfsconfig");
+                if( self::$config === false ){
+                    self::$config = require $name;
+                    apc_store("phpdfsconfig", self::$config);
+                }
+            } else {
+                self::$config = require $name;
+            }
         }
         return self::$config;
     }
@@ -115,10 +123,16 @@ class PHPDFS_Helper {
 
     public static function getPathHash( $name ){
         $c = self::getConfig();
+        $path = "00/00";
         $pathHash = ( crc32( $name ) >> 16 ) & 0x7fff;
-        srand( $pathHash );
-        $pathHash = rand(1,10000);
-        return $pathHash;
+        mt_srand( $pathHash );
+        $pathHash = sprintf("%05s", mt_rand(0,9999));
+        $path[0] = $pathHash[1];
+        $path[1] = $pathHash[2];
+        $path[2] = "/";
+        $path[3] = $pathHash[3];
+        $path[4] = $pathHash[4];
+        return $path;
     }
 
     public static function disconnectClient() {
