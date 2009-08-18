@@ -281,7 +281,7 @@ public class PHPDFSTestClient extends Thread {
             }
 
             try{
-                int sleepTime = sleep > 0 ? Math.abs( ran.nextInt( (int) sleep ) ) : 0;
+                int sleepTime = sleep > 0 ? ran.nextInt( (int) sleep ) : 0;
                 if( sleepTime > 0 ){
                     sleep( sleepTime );
                 }
