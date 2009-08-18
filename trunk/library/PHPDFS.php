@@ -474,9 +474,7 @@ class PHPDFS
             // get the paths, choose one, and print a 301 redirect
             $nodes = $this->getTargetNodes();
             if( $nodes ){
-                srand();
-                $whichNode = rand( 0, count( $nodes ) - 1 );
-                PHPDFS_Helper::send301( $nodes[ $whichNode ]['proxyUrl'].'/'.$this->params['name'] );
+                PHPDFS_Helper::send301( $nodes[ 0 ]['proxyUrl'].'/'.$this->params['name'] );
             }
         }
     }
@@ -838,7 +836,9 @@ class PHPDFS
             $curl = curl_init();
             $headers = array();
             // disconnect before we make another request
-            PHPDFS_Helper::disconnectClient();
+            if( $this->iAmATarget() ){
+                PHPDFS_Helper::disconnectClient();
+            }
             $loops = 0;
             $nodeLength = count( $this->getTargetNodes( ) );
             do{
@@ -867,6 +867,9 @@ class PHPDFS
             } while(( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
             fclose($fh);
+            if( !$this->iAmATarget() ){
+                PHPDFS_Helper::disconnectClient();
+            }
         }
     }
 

@@ -49,7 +49,8 @@ public class PHPDFSTestClient extends Thread {
 
     private long time = 0;
     private long bytesToUpload = 0;
-    private int getsPerUpload = 0;
+    private double writeLoad = 0;
+    private long sleep = 0;
     static AtomicInteger numThreads = new AtomicInteger(0);
 
     private long myTotalBytesUp = 0;
@@ -94,12 +95,13 @@ public class PHPDFSTestClient extends Thread {
     private ArrayList<String> filesToUpload = null;
     private ArrayList<String> baseUrls = null;
 
-    public PHPDFSTestClient( long bytesToUpload, int numThreads, int getsPerUpload, String filesToUploadFile, String baseUrlFile ){
+    public PHPDFSTestClient( long bytesToUpload, int numThreads, double writeLoad, String filesToUploadFile, String baseUrlFile, long sleep ){
         this.bytesToUpload = bytesToUpload;
-        this.getsPerUpload = getsPerUpload;
+        this.writeLoad = writeLoad;
         PHPDFSTestClient.numThreads.compareAndSet(0, numThreads);
         filesToUpload = fileToArrayList(filesToUploadFile);
         baseUrls = fileToArrayList(baseUrlFile);
+        this.sleep = sleep;
     }
 
     /**
@@ -260,18 +262,31 @@ public class PHPDFSTestClient extends Thread {
     private void runTest(){
         startTime.compareAndSet(0, System.currentTimeMillis() );
         while( myTotalBytesUp < bytesToUpload ){
-            // randomly select a baseurl and filename to use for an upload
-            String whichUrl = baseUrls.get( ran.nextInt( baseUrls.size() ) ) + "/" + UUID.randomUUID().toString();
 
-            // randomly choose a file for upload
-            String whichFile = filesToUpload.get( ran.nextInt( filesToUpload.size() ) );
-            String fileType = "text/plain";
+            // solve randomly according to the getsPerUpload value
+            String whichUrl;
+            
+            if( ( ran.nextDouble() ) < writeLoad ){
+                // randomly select a baseurl and filename to use for an upload
+                whichUrl = baseUrls.get( ran.nextInt( baseUrls.size() ) ) + "/" + UUID.randomUUID().toString();
 
-            doPut( whichUrl, whichFile, fileType );
+                // randomly choose a file for upload
+                String whichFile = filesToUpload.get( ran.nextInt( filesToUpload.size() ) );
+                String fileType = "text/plain";
 
-            for( int i = 0; i < getsPerUpload; i++ ){
+                doPut( whichUrl, whichFile, fileType );
+            } else if( uploadedFiles.size() > 0 ){
                 whichUrl = uploadedFiles.get( ran.nextInt( uploadedFiles.size() ) );
                 doGet(whichUrl);
+            }
+
+            try{
+                int sleepTime = sleep > 0 ? Math.abs( ran.nextInt( (int) sleep ) ) : 0;
+                if( sleepTime > 0 ){
+                    sleep( sleepTime );
+                }
+            } catch( InterruptedException e){
+                
             }
         }
     }
@@ -401,22 +416,24 @@ public class PHPDFSTestClient extends Thread {
     }
 
     public static void main( String args[] ){
-        int getsPerUpload = 1;
-        int threads = 50;
+        double writeLoad = 0.2;
+        long sleep = 0;
+        int threads = 1;
         long bytesToUploadPerThread = 2048000L;
         String filesToUpload = "/Users/shane/dev/phpdfs/utils/filesToUpload";
         String baseUrls = "/Users/shane/dev/phpdfs/utils/baseUrls";
 
-        if( args.length == 5 ){
+        if( args.length == 6 ){
             threads = Integer.parseInt( args[0] );
             bytesToUploadPerThread = Long.parseLong( args[1] );
-            getsPerUpload = Integer.parseInt( args[2] );
+            writeLoad = Double.parseDouble( args[2] );
             filesToUpload = args[3];
             baseUrls = args[4];
+            sleep = Long.parseLong( args[5] );
         }
         
         for( int n = 0; n < threads; n++ ){
-            PHPDFSTestClient thw = new PHPDFSTestClient( bytesToUploadPerThread, threads, getsPerUpload, filesToUpload, baseUrls );
+            PHPDFSTestClient thw = new PHPDFSTestClient( bytesToUploadPerThread, threads, writeLoad, filesToUpload, baseUrls, sleep );
             thw.start();
         }
     }
