@@ -280,7 +280,7 @@ public class PHPDFSTestClient extends Thread {
                 doGet(whichUrl);
             }
 
-                int randSleepTime = Math.abs(ran.nextInt( (int) sleep ));
+                int randSleepTime = sleep > 0 ? ran.nextInt( (int) sleep ) : 0;
                 if( randSleepTime > 0 ){
                     try{ sleep( randSleepTime ); }
                     catch( InterruptedException e){}
