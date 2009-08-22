@@ -81,7 +81,7 @@ function handleUpload(){
         $paths = $client->getPaths( $name );
         $urls = array();
         foreach( $paths as $path ){
-            $url = $path['url'];
+            $url = $path['staticUrl'];
             $urls[] = "<a href='$url'>$url</a> --- <a href='?delete=$name'>delete $name (deletes all replicas)</a> -- fetch <a href='?get=$name'>$name</a> using the PHPDFS_Client<br>";
         }
         showMessage($urls);

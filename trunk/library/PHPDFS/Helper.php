@@ -122,7 +122,6 @@ class PHPDFS_Helper {
     }
 
     public static function getPathHash( $name ){
-        $c = self::getConfig();
         $path = "00/00";
         $pathHash = ( crc32( $name ) >> 16 ) & 0x7fff;
         mt_srand( $pathHash );
@@ -137,14 +136,18 @@ class PHPDFS_Helper {
 
     public static function disconnectClient( $targetNodes = null, $name = null ) {
         if(self::$clientGone) return;
+
         if( isset( self::$config['disconnectAfterSpooling'] ) && self::$config['disconnectAfterSpooling'] ){
             // use a 204 no content header
             header( $_SERVER['SERVER_PROTOCOL']." 204 No Content" ) ;
             // FIXME, we need to separate the 204 response out from the disconnect logic
             if( !is_null($targetNodes) ){
+                // get the directory where the data is stored
+                $pathHash = self::getPathHash( $name );
                 $n = 0;
                 foreach( $targetNodes as $targetNode ){
-                    header( "Target-Node-$n: ".$targetNode['proxyUrl'].'/'.$name ) ;
+                    $headerStr = "Target-Node-$n: ".$targetNode['staticUrl']."/$pathHash/$name";
+                    header( $headerStr ) ;
                     $n++;
                 }
             }
