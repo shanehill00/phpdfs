@@ -611,13 +611,18 @@ class PHPDFS
 
     /*
      * get the data from stdin and put it in a temp file
+     * we use the dio functions as they are much faster
+     * than file_put_contents on big files (1mb+)
      *
-     * @throws PHPDFS_PutException
      */
     protected function spoolData( ){
         // write stdin to a temp file
         $putData = fopen("php://input", "rb");
-        file_put_contents($this->tmpPath, $putData);
+        $fd = dio_open($this->tmpPath, O_CREAT | O_NONBLOCK | O_WRONLY );
+        while( $data = fread($putData, $this->config['spoolReadSize'] ) ){
+            dio_write($fd, $data);
+        }
+        dio_close($fd);
     }
 
     /**

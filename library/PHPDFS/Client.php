@@ -27,6 +27,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+require_once('PHPDFS/Client.php');
+
 class PHPDFS_Client{
 
     /**
@@ -100,10 +102,12 @@ class PHPDFS_Client{
     public function getPaths( $fileId ){
         $paths = array();
         $nodes = $this->locator->findNodes( $fileId );
+        $pathHash = PHPDFS_Helper::getPathHash($fileId);
         foreach( $nodes as $node ){
             $data = array();
             $data['url'] = $node['proxyUrl'].'/'.$fileId;
             $data['proxyUrl'] = $node['proxyUrl'];
+            $data['staticUrl'] = $node['staticUrl']."/$pathHash/$fileId";
             $paths[] = $data;
         }
         return $paths;
