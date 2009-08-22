@@ -135,11 +135,19 @@ class PHPDFS_Helper {
         return $path;
     }
 
-    public static function disconnectClient() {
+    public static function disconnectClient( $targetNodes = null, $name = null ) {
         if(self::$clientGone) return;
         if( isset( self::$config['disconnectAfterSpooling'] ) && self::$config['disconnectAfterSpooling'] ){
             // use a 204 no content header
             header( $_SERVER['SERVER_PROTOCOL']." 204 No Content" ) ;
+            // FIXME, we need to separate the 204 response out from the disconnect logic
+            if( !is_null($targetNodes) ){
+                $n = 0;
+                foreach( $targetNodes as $targetNode ){
+                    header( "Target-Node-$n: ".$targetNode['proxyUrl'].'/'.$name ) ;
+                    $n++;
+                }
+            }
             if( ob_get_length() ){
                 ob_end_clean();
             }
