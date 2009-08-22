@@ -731,12 +731,20 @@ class PHPDFS
     }
 
     protected function forwardDataForPut( ){
-
+        $targetNodes = $this->getTargetNodes();
         if( $this->iAmATarget() ){
+            // disconnect the client before we start
+            // replicating since we are a storage node
+            // and already have the file
+            PHPDFS_Helper::disconnectClient($targetNodes, $this->params['fileName']);
             $this->sendDataForPut( $this->finalPath );
         } else {
             $this->sendDataForPut( $this->tmpPath );
             unlink( $this->tmpPath );
+            // disconnect only after we have
+            // uploaded the file to the first
+            // storage target node
+            PHPDFS_Helper::disconnectClient( $targetNodes, $this->params['fileName'] );
         }
 
     }
@@ -835,10 +843,6 @@ class PHPDFS
             $origPosition = $forwardInfo['position'];
             $curl = curl_init();
             $headers = array();
-            // disconnect before we make another request
-            if( $this->iAmATarget() ){
-                PHPDFS_Helper::disconnectClient();
-            }
             $loops = 0;
             $nodeLength = count( $this->getTargetNodes( ) );
             do{
@@ -867,9 +871,6 @@ class PHPDFS
             } while(( $errNo || $info['http_code'] >= 400 ) && $origPosition != $forwardInfo['position'] && $forwardInfo );
             curl_close($curl);
             fclose($fh);
-            if( !$this->iAmATarget() ){
-                PHPDFS_Helper::disconnectClient();
-            }
         }
     }
 
