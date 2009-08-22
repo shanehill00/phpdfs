@@ -113,18 +113,39 @@ return array(
                     //              a server / node / storage system each node structure contains
                     //              the information necessary for accessing that node in the system.
                     //              currently the only key in the node structure is 'proxyUrl'.
-                    //              The characteristice of the value of the 'proxyUrl' element
+                    //              The characteristics of the value of the 'proxyUrl' element
                     //              are the same as described above for the 'thisproxyUrl' element
+                    //
+                    //              the static url is a base url for creating static urls
+                    //              for fetching data (doing GET rquests).  this has been added
+                    //              for efficiency sake and does not have to be used.
+                    //              so this means that the getPaths call to the locator class will return
+                    //              two sets of urls,  one will be in the form:
+                    //
+                    //                      http://<domain>/dfs.php/filename
+                    //
+                    //              the others will be in the form:
+                    //
+                    //                      http://<domain>/nn/nn/filename
+                    //                      each n in the url above denotes a single integer
+                    //                      between 0 and 9.  the above urls will represent
+                    //                      a static or direct path to the file
+                    //                      (if you have setup your web server correctly)
                     //
                     //
                     'clusters' => array(
                         // cluster 1
                         array(
                             'weight' => 1,
-                            'nodes' =>array(
-                                 array('proxyUrl' => 'http://192.168.0.2:80/dfs.php',), // cluster 1 node 1 (1)
-                                 array('proxyUrl' => 'http://192.168.0.6:80/dfs.php',), // cluster 1 node 2 (2)
-                             ),
+                            'nodes' => array(
+                                array(
+                                    'proxyUrl' => 'http://192.168.0.2:80/dfs.php',
+                                    'staticUrl' => 'http://192.168.0.2:80'
+                            ), // cluster 1 node 1 (1)
+                                array(
+                                    'proxyUrl' => 'http://192.168.0.6:80/dfs.php',), // cluster 1 node 2 (2)
+                                    'staticUrl' => 'http://192.168.0.6:80'
+                            ),
                          ),
                       ),
                   ),
