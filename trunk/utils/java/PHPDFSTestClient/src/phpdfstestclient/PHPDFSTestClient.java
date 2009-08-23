@@ -238,7 +238,7 @@ public class PHPDFSTestClient extends Thread {
                 myTotalResponseFailuresUp++;
                 myTotalResponseFailures++;
                 myTotalFailures++;
-                uploadResponseErrorFile.printf("%s,%s,%s,%s,%s,%s,%s,%n",url,remoteFilename,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+                uploadResponseErrorFile.printf("%s,%s,%s,%s,%s,%s,%s%n",url,remoteFilename,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
                 System.err.printf("Method failed while PUTting %s for thread %s : %s%n", url,getName(),method.getStatusLine() );
             } else {
                 long fileLength = file.length();
@@ -253,7 +253,7 @@ public class PHPDFSTestClient extends Thread {
                     }
                 }
 
-                uploadedFilesFile.printf("%s,%s,%s,%s,%s,%s,%s,%s,%n",remoteFilename,fileLength,url,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+                uploadedFilesFile.printf("%s,%s,%s,%s,%s,%s,%s,%s%n",remoteFilename,fileLength,url,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
 
                 myTotalBytesUp += fileLength;
                 myTotalRequestsUp++;
@@ -266,13 +266,13 @@ public class PHPDFSTestClient extends Thread {
             myTotalHttpExceptionsUp++;
             myTotalHttpExceptions++;
             myTotalFailures++;
-            uploadHttpExceptionsFile.printf("%s,%s,%s,%s,%s,%s,%s,%n",url,remoteFilename,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+            uploadHttpExceptionsFile.printf("%s,%s,%s,%s,%s,%s,%s%n",url,remoteFilename,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
             System.err.printf("Fatal protocol violation while PUTting %s for thread %s : %s%n",url,getName(),e.getMessage());
         } catch (IOException e) {
             myTotalIOExceptionsUp++;
             myTotalIOExceptions++;
             myTotalFailures++;
-            uploadIOExceptionsFile.printf("%s,%s,%s,%s,%s,%s,%s,%n",url,remoteFilename,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+            uploadIOExceptionsFile.printf("%s,%s,%s,%s,%s,%s,%s%n",url,remoteFilename,filename,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
             System.err.printf("Fatal transport error while PUTting %s for thread %s : %s%n",url,getName(),e.getMessage());
         } finally {
             // Release the connection.
@@ -307,40 +307,40 @@ public class PHPDFSTestClient extends Thread {
                 myTotalResponseFailuresDown++;
                 myTotalResponseFailures++;
                 myTotalFailures++;
-                downloadErrorsFile.printf("%s,%s,%s,%s,%s,%n",url,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+                downloadErrorsFile.printf("%s,%s,%s,%s,%s%n",url,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
                 System.err.printf("Method failed while GETting %s for thread %s : %s%n", url,getName(),method.getStatusLine() );
             } else if( bytesDown != bytesExpected ){
                 myTotalResponseFailuresDown++;
                 myTotalResponseFailures++;
                 myTotalFailures++;
                 statusCode = 1500;
-                downloadErrorsFile.printf("%s,%s,%s,%s,%s,%s,%n",url,statusCode,bytesExpected,bytesDown,getName(),System.currentTimeMillis());
+                downloadErrorsFile.printf("%s,%s,%s,%s,%s,%s%n",url,statusCode,bytesExpected,bytesDown,getName(),System.currentTimeMillis());
                 System.err.printf("Corrupted download for url: %s for thread %s : expected %s but got %s%n",url,getName(),bytesExpected,bytesDown );
             } else {
                 // Read the response body and discard it
                 InputStream responseStream = method.getResponseBodyAsStream();
                 while( responseStream.read( ) != -1 ){ responseStream.skip( 30720000 ); }
 
+                downloadedFilesFile.printf("%s,%s,%s,%s,%s,%s%n",url,bytesDown,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+
                 myTotalBytesDown += bytesDown;
                 myTotalRequestsDown++;
 
                 myTotalBytes += bytesDown;
                 myTotalRequests++;
-                
-                downloadedFilesFile.printf("%s,%s,%s,%s,%s,%s,%n",url,bytesDown,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
             }
 
         } catch (HttpException e) {
             myTotalHttpExceptionsDown++;
             myTotalHttpExceptions++;
             myTotalFailures++;
-            downloadHttpExceptionsFile.printf("%s,%s,%s,%s,%s,%n",url,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+            downloadHttpExceptionsFile.printf("%s,%s,%s,%s,%s%n",url,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
             System.err.printf("Fatal protocol violation while GETting %s for thread %s : %s%n",url,getName(),e.getMessage());
         } catch (IOException e) {
             myTotalIOExceptionsDown++;
             myTotalIOExceptions++;
             myTotalFailures++;
-            downloadIOExceptionsFile.printf("%s,%s,%s,%s,%s,%s,%s,%n",url,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
+            downloadIOExceptionsFile.printf("%s,%s,%s,%s,%s,%s,%s%n",url,statusCode,method.getStatusLine(),getName(),System.currentTimeMillis());
             System.err.printf("Fatal transport error while GETting %s for thread %s : %s%n",url,getName(),e.getMessage());
         } finally {
             // Release the connection.
@@ -348,9 +348,38 @@ public class PHPDFSTestClient extends Thread {
         }
     }
 
+    protected void cleanup(){
+        downloadErrorsFile.flush();
+        downloadErrorsFile.close();
+
+        downloadHttpExceptionsFile.flush();
+        downloadHttpExceptionsFile.close();
+
+        downloadIOExceptionsFile.flush();
+        downloadIOExceptionsFile.close();
+
+        downloadedFilesFile.flush();
+        downloadedFilesFile.close();
+
+
+        uploadHttpExceptionsFile.flush();
+        uploadHttpExceptionsFile.close();
+
+        uploadIOExceptionsFile.flush();
+        uploadIOExceptionsFile.close();
+
+        uploadResponseErrorFile.flush();
+        uploadResponseErrorFile.close();
+
+        uploadedFilesFile.flush();
+        uploadedFilesFile.close();
+        
+    }
+
     public void doTest( ){
         runTest();
         writeStats();
+        cleanup();
     }
 
     /**
@@ -525,6 +554,7 @@ public class PHPDFSTestClient extends Thread {
                 FileWriter stats = new FileWriter(statsFile);
                 stats.write(report);
                 stats.flush();
+                stats.close();
             } catch( IOException e ) {
                 e.printStackTrace();
                 System.exit(99);
@@ -538,10 +568,10 @@ public class PHPDFSTestClient extends Thread {
     }
 
     public static void main( String args[] ){
-        double writeLoad = 1;
+        double writeLoad = .2;
         long sleep = 0;
         int threads = 1;
-        long bytesToUploadPerThread = 2048000L;
+        long bytesToUploadPerThread = 20480000L;
         String filesToUpload = "/Users/shane/dev/phpdfs/utils/filesToUpload";
         String baseUrls = "/Users/shane/dev/phpdfs/utils/baseUrls";
         long uploadWait = 0;
