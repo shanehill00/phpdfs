@@ -1,0 +1,232 @@
+ec2-67-202-19-47.compute-1.amazonaws.com,ip-10-244-129-155.ec2.internal,10.244.129.155,server,2
+ec2-174-129-106-81.compute-1.amazonaws.com,ip-10-244-51-63.ec2.internal,10.244.51.63,server,2
+ec2-174-129-118-118.compute-1.amazonaws.com,ip-10-244-162-160.ec2.internal,10.244.162.160,server,2
+ec2-174-129-122-181.compute-1.amazonaws.com,ip-10-244-174-239.ec2.internal,10.244.174.239,server,2
+
+
+// running.*?aki-\w+	ari-\w+		monitoring-disabled
+// INSTANCE	i-\w+	ami-\w+
+//\s*+ -> ' '
+// (ec2.*?compute-1.amazonaws.com)	(domU.*?internal)  -> $1,$2,server,2
+// (domU-)(\d+)(-)(\d+)(-)(\d+)(-)(\d+)(.*?.internal) -> $1$2$3$4$5$6$7$8$9,$2.$4.$6.$8
+
+
+./csshX --ssh_args="-i /Users/shane/downloads/phpdfs-0.pem" `cat /Users/shane/dev/phpdfs/installs/test/configs/serverHosts`
+
+=====================================
+UPDATING THE INSTANCES AND CREATING AN AMI
+
+fire up a single instance
+svn up the latest phpdfs code
+
+create a script for creating a file index of all the files stored by phpdfs
+
+    ls -lR /mnt/phpdfs/data | grep -E '^-'
+
+put the script in the root home dir with the rest named make_file_index.sh
+add the new apache config that points to where the data dirs are (/mnt/phpdfs/data)
+modify the ./setup.sh script to also copy the upload and dfs.php script out to the web dir ( /mnt/phpdfs/data )
+
+start and run a small test using the instructions below
+verify that the client works and that all of the expected files are created
+
+    /tmp/downloadedFiles
+    /tmp/uploadedFiles
+    /tmp/downloadIOExceptions
+    /tmp/uploadIOExceptions
+    /tmp/downloadHttpExceptions
+    /tmp/uploadHttpExceptions
+    /tmp/downloadErrors
+    /tmp/uploadResponseErrors
+    /tmp/phpdfs.stats.txt
+
+
+check that the uploaded files are available via the new static url concept
+
+end the test according to the insructions below
+
+if all checks out, create an ami, then run the big test.
+
+========================================
+STARTING A TEST
+
+    fire up the instances
+    copy the data from the control panel or from the ec2-describe-instances command to create the node data file
+    generate the config and command files
+    copy the configs out to the servers using the copyConfs.sh script
+    copy the baseUrls out to the clients using the copybaseUrls.sh script
+    fire up the csshx terms for the clients and servers
+
+/Users/shane/downloads/csshX-0.63/csshX --ssh_args="-i /Users/shane/downloads/phpdfs-0.pem" `cat /Users/shane/dev/phpdfs/installs/test/configs/serverHosts`
+
+    setup the servers by executing the ./setup.sh script
+    clean the servers by executing the ./clean_for_test.sh script
+    start dstats by executing the ./start_dstats.sh script
+    start the test by executing the java command for starting clients
+
+cd /home/phpdfs/phpdfs/utils/java/PHPDFSTestClient/dist
+java -jar PHPDFSTestClient.jar 50 5000000 .2 /home/phpdfs/phpdfs/conf/filesToUpload /home/phpdfs/phpdfs/conf/baseUrls 0 0
+
+
+ENDING THE TEST
+
+    stop dstat
+    execute the ./get_test_data.sh script
+    execute the scripts that will download all of the test data for the clients and servers
+
+=====================================
+
+
+phpdfs test setup
+
+DSTAT
+
+start dstat using the following command
+
+    * dstat -Ttlgcndymspif --output /mnt/$HOST.dstat.stats 5 >>/dev/null &
+
+
+make an ami
+
+create and upload:
+
+   1. scp -i /Users/shane/downloads/phpdfs-0.pem  /Users/shane/downloads/pk-JK6MSL3EHOW4KTU2IEEV327ZJ2AJS5HG.pem /Users/shane/downloads/cert-JK6MSL3EHOW4KTU2IEEV327ZJ2AJS5HG.pem root@ec2-75-101-231-158.compute-1.amazonaws.com:/mnt
+   2. ec2-bundle-vol -u 770280493286 -r x86_64 -p phpdfs-image7 -d /mnt -k /mnt/pk-JK6MSL3EHOW4KTU2IEEV327ZJ2AJS5HG.pem -c /mnt/cert-JK6MSL3EHOW4KTU2IEEV327ZJ2AJS5HG.pem
+   3. ec2-upload-bundle -b shanehill00 -m /mnt/phpdfs-image7.manifest.xml -a AKIAICY7WHPMMQZSKHOA -s A8unHzc5jl+mHemVCIn2s+MaeAvc44NgD8+t1J1h
+
+
+register:
+
+throught the aws management console or through the following command line:(s)
+
+    *
+
+
+      export EC2_HOME=/Users/shane/downloads/ec2-api-tools-1.3-36506/
+      export PATH=$PATH:/Users/shane/downloads/ec2-api-tools-1.3-36506/bin
+      export EC2_CERT=~/downloads/cert-JK6MSL3EHOW4KTU2IEEV327ZJ2AJS5HG.pem
+      EC2_PRIVATE_KEY=~/downloads/pk-JK6MSL3EHOW4KTU2IEEV327ZJ2AJS5HG.pem
+      ec2-register shanehill00/phpdfs-image5.manifest.xml
+
+
+general machine setup
+
+=======================
+
+   1. fire up an instance
+   2. start apache ::: write down the internal ip address in the baseUrls file that will get copied to all of the client nodes and also in the config that will get copied to everyone
+      make a mapping file ::: create the test files ::: create / edit the filesToUpload :::  make sure the config is ok
+
+      /usr/local/apache2/bin/apachectl restart;
+
+      ifconfig;
+
+      mkdir -p /mnt/phpdfs/data /mnt/phpdfs/tmp && chmod 0777 /mnt/phpdfs/data /mnt/phpdfs/tmp;
+
+      php -r'
+      $files = array(50000,100000,500000,1000000,3000000,5000000,10000000);
+      $dir = "/home/phpdfs/phpdfs/conf/testfiles";
+              @mkdir($dir,0777,true);
+              foreach( $files as $filesize ){
+                  file_put_contents("$dir/$filesize", str_repeat("a",$filesize) );
+              }
+      ';
+
+      echo '/home/phpdfs/phpdfs/conf/testfiles/50000
+      /home/phpdfs/phpdfs/conf/testfiles/50000
+      /home/phpdfs/phpdfs/conf/testfiles/50000
+      /home/phpdfs/phpdfs/conf/testfiles/100000
+      /home/phpdfs/phpdfs/conf/testfiles/100000
+      /home/phpdfs/phpdfs/conf/testfiles/100000
+      /home/phpdfs/phpdfs/conf/testfiles/500000
+      /home/phpdfs/phpdfs/conf/testfiles/500000
+      /home/phpdfs/phpdfs/conf/testfiles/1000000
+      /home/phpdfs/phpdfs/conf/testfiles/3000000
+      /home/phpdfs/phpdfs/conf/testfiles/5000000
+      /home/phpdfs/phpdfs/conf/testfiles/10000000' > /home/phpdfs/phpdfs/conf/filesToUpload;
+
+      cd /home/phpdfs/phpdfs/utils/ && php -d include_path=.:/home/phpdfs/phpdfs/library:/home/phpdfs/phpdfs/conf check_reqs.php ../conf/cluster_config.php;
+
+      chmod -R 0777 /home/phpdfs/phpdfs/conf;
+      chown -R phpdfs.phpdfs /home/phpdfs;
+
+
+
+   3. edit the baseUrls to contain the local ip only
+
+      emacs /home/phpdfs/phpdfs/conf/baseUrls
+
+   4. add the correct thisProxyUrl to the local config for the node also to the data portion of the config.
+
+      set the replication value to 1
+
+      emacs /home/phpdfs/phpdfs/conf/cluster_config.php
+
+   5. test the installation, externally and internally
+
+      cd /home/phpdfs/phpdfs/utils/java/PHPDFSTestClient/dist
+      java -jar PHPDFSTestClient.jar 50 5000000 1 /home/phpdfs/phpdfs/conf/filesToUpload /home/phpdfs/phpdfs/conf/baseUrls 0 0
+
+
+=======================
+
+set up for a server node
+
+   1. add the correct thisProxyUrl to the local config for the node also to the data portion of the config and include all other nodes in the server system.
+
+      make sure to change the replication factor to 2 on all server nodes
+
+      emacs /home/phpdfs/phpdfs/conf/cluster_config.php
+
+   2. make sure the config is ok
+
+       cd /home/phpdfs/phpdfs/utils/ && php -d include_path=.:/home/phpdfs/phpdfs/library:/home/phpdfs/phpdfs/conf check_reqs.php ../conf/cluster_config.php
+
+
+========================
+
+prepare the server node for a test
+
+make sure you are root
+
+rm -rf /mnt/phpdfs/data
+mkdir -p /mnt/phpdfs/data
+chmod -R 0777 /mnt/phpdfs
+
+du -sh /mnt/phpdfs/data/
+ls -la /mnt/phpdfs/data/
+ls -l1R /mnt/phpdfs/data | wc -l
+
+/usr/local/apache2/bin/apachectl restart
+tail -f /usr/local/apache2/logs/error_log
+
+ cd /home/phpdfs/phpdfs/utils/ && php -d include_path=.:/home/phpdfs/phpdfs/library:/home/phpdfs/phpdfs/conf check_reqs.php ../conf/cluster_config.php
+================
+
+check a  test run
+
+
+du -sh /mnt/phpdfs/data
+ls -l1R /mnt/phpdfs/data | wc -l
+
+du -sh /mnt/phpdfs/tmp
+ls -l1R /mnt/phpdfs/tmp | wc -l
+
+get test results
+
+stop dstat and then issue the following command:
+
+scp -i /Users/shane/downloads/phpdfs-0.pem  root@ec2-75-101-231-158.compute-1.amazonaws.com:/mnt/dstat.stats statData/c1n3/dstats.$HOSTNAME
+
+
+
+=====================
+
+setup for a client node
+
+   1. add all of the baseUrls
+
+       rm -rf /home/phpdfs/phpdfs/conf/baseUrls && emacs /home/phpdfs/phpdfs/conf/baseUrls
+
+
+

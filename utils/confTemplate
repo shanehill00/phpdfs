@@ -1,0 +1,130 @@
+<?php
+return array(
+            // autoMove tells PHPDFS whther or not to automatically move data
+            // when the configs change and a GET cannot find data.
+            // if this value evaluates to true, then whenever PHPDFS cannot find
+            // a file for a GET request, it will look in the old location (if there is an old location)
+            // and if it can find it there it will move it from the
+            // old location to the new location and return the image to the client.
+            // if automove is false then a 404 is returned to the client if PHPDFS
+            // cannot find the requested file
+            'autoMove' => false,
+
+            //  the path that the fileinfo extension will use
+            'magicDbPath' => '/home/phpdfs/phpdfs/conf/magic.mgc',
+
+            // this setting will tell PHPDFS to disconnect the client
+            // after key points in propagation of an action.
+            //
+            // For example we disconnect the client before continung with replicating
+            // an uploaded file so that the client will NOT hang on and wait for us to complete
+            // communication with a completely different node.
+            'disconnectAfterSpooling' => true,
+
+            // The url for THIS node which is mapped to the dfs.php file.
+            // This can be a direct access or maybe something like an apache rewrite rule.
+            // This is the url to which all of the PUTs, GETs, MOVEs and DELETEs are sent.
+            'thisProxyUrl' =>  'THISPROXY',
+
+            // the number of bytes to read when spooling a file to disk
+            'spoolReadSize' => 2048,
+
+            // whether or not to write debug messages to the error log
+            // this is mostly useful to see the propagation of an action
+            // between nodes.
+            'debug' => true,
+
+            // the data portion of the config is the part that is used for mapping objects to nodes
+            // the data element holds an array of configs where the config located at index 0 is the most current
+            // config in use and the other configs are prior configs.
+            //
+            // some of the reasons you might be adding a new config entry are:
+            //
+            // * when you add or remove servers
+            // * you need to change the weighting between clusters
+            // * you are changing to new Locator algorithm
+            'data' => array(
+                array(
+
+                    // The class name of the locator class to be used for this data config
+                    'locatorClassName' => 'PHPDFS_DataLocator_RUSHr',
+
+                    // the path to the file that comntains the locatorClassName class code
+                    'locatorClassPath' => 'PHPDFS/DataLocator/RUSHr.php',
+
+                    //=========================================================
+                    // THE STORAGE AND TEMP ROOTS SHOULD NOT BE THE SAME VALUE
+                    //=========================================================
+                    // this is the directory where files will be stored permanently
+                    // this directory should be writable and readable by the webserver
+                    // this directory needs to be created by you.  PHPDFS will not create it.
+                    'storageRoot' => '/mnt/phpdfs/data',
+
+                    // this is the directory where files will be stored temporarily
+                    // for example, when we are accepting an upload, or when we are getting a file
+                    // from a remote node to fulfill a GET request.
+                    //
+                    // this directory should be writable and readable by the webserver
+                    // this directory needs to be created by you.  PHPDFS will not create it.
+                    'tmpRoot' => '/mnt/phpdfs/tmp',
+
+                    // this is the number iof replicants to make
+                    // this number CANNOT exceed the number of nodes
+                    // in the first cluster of the cluster config below
+                    // the check_reqs.php file will check your config
+                    // to be sure that this value is appropriate
+                    'replicationDegree' => REPLICATION,
+
+                    // the clusters config is an array where each element contains
+                    // an array which contains two keys:
+                    //      weight - this is the weight given to this cluster (not a particular node)
+                    //               if you need to weight a single server, then you need to create a
+                    //               cluster for that server alone and give it a weight
+                    //
+                    //      nodes - this is an array of arrays where each nested array represents
+                    //              a server / node / storage system each node structure contains
+                    //              the information necessary for accessing that node in the system.
+                    //              currently the only key in the node structure is 'proxyUrl'.
+                    //              The characteristice of the value of the 'proxyUrl' element
+                    //              are the same as described above for the 'thisproxyUrl' element
+                    //
+                    //
+                    'clusters' => array(
+                    NODES
+                      ),
+                  ),
+              ),
+
+              // below are the error and debug message templates, you probably do not need to change anything below this line
+            'debugMsgs' => array(
+                'moveDeleteAlike' => 'DEBUG: nodes were alike in delete for %s',
+                'moveCreateAlike' => "DEBUG: nodes were alike in create for %s",
+                'moveFinished'    => "DEBUG: finished move - checking if we are the last node in the replication chain",
+                'autoMove'        => "DEBUG: facilitating auto move",
+                'moveStartDelete' => "DEBUG: replica %s : forwarded a move cmd (start) in delete context to %s",
+                'sendDeleteForMove' => "DEBUG: replica %s : forwarded a move cmd in delete context to %s",
+                'sendStartMove'   => "DEBUG: replica %s : forwarded a move cmd in start context to %s moveConfigIndex: %s configIndex: %s",
+                'sendDataToStartMove' => "DEBUG: forwarded %s to start a move cmd in create context to %s",
+                'sendDataForMove' => "DEBUG: replica %s : copied data and forwarded a move cmd in create context to %s",
+             ),
+
+            'errMsgs' => array(
+                'doDeleteForMove' => "ERROR: action: %s - context: %s - name: %s - %s - %s",
+                'doCreateForMove' => "ERROR: action: %s - context: %s - name: %s - %s - %s",
+                'doStartForMove'  => "ERROR: action: %s - context: %s - name: %s - %s - %s",
+                'putData'         => "ERROR: action: %s - name: %s - %s - %s",
+                'putForward'      => "ERROR: action: %s - name: %s - %s - %s",
+                'deleteData'      => "ERROR: action: %s - name: %s - %s - %s",
+                'deleteForward'   => "ERROR: action: %s - name: %s - %s - %s",
+                'deleteSend'      => "ERROR: replica %s : forwarding a delete command to %s failed using curl.  curl error code: %s curl error message: %s |||| response: %s",
+                'sendDataForPut'  => "ERROR: replica: %s - sending data to %s via curl failed.  curl error code: %s curl error message: %s |||| response: %s",
+                'startDeleteForMove' => "ERROR: replica %s : forwarding a move cmd (start) in delete context to %s failed using curl.  curl error code: %s curl error message: %s |||| response: %s",
+                'startDeleteForMoveEmptyForward' => "ERROR: could not start a delete for move.  it appears as if the forwardInfo is empty",
+                'sendDeleteForMove' => "ERROR: replica %s : forwarding a move cmd in delete context to %s failed using curl.  curl error code: %s curl error message: %s |||| response: %s",
+                'sendStartMove'   => "ERROR: replica %s : forwarding a move cmd in start context to %s failed using curl.  curl error code: %s curl error message: %s |||| response: %s",
+                'sendDataToStartMove' => "ERROR: replica: %s - sending data for a move in create context to %s via curl failed.  curl error code: %s curl error message: %s |||| response: %s",
+                'sendDataForMove' => "ERROR: replica: %s - sending data for a move in create context to %s via curl failed.  curl error code: %s curl error message: %s |||| response: %s",
+                'noNodeFound'  => "function: %s - file: %s - line: %s - iterated all of the nodes and could not find a good one.  maybe your configuration is bad. be sure to check all of the proxy urls and make sure they are correct",
+            ),
+
+        );
