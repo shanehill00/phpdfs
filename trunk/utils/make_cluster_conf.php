@@ -69,7 +69,9 @@ function makeClusterConf( $nodeData ){
 }
 
 function makeNodeStr( $nodeData ){
+    $configStr = array();
     $nodeStr = array();
+    $n = 1;
     foreach( $nodeData as $nodeInfo ){
         $nodeInfo = trim($nodeInfo);
         if(!$nodeInfo){
@@ -83,16 +85,40 @@ function makeNodeStr( $nodeData ){
         $replication = $info[4];
         
         if( $type == 'server' ){
-            $nodeStr[] = 'array("proxyUrl" => "http://'.$privateIp.'/dfs.php", "staticUrl" => "http://'.$privateIp.'/data"),';
+            $nodeStr[] = "
+                         array(
+                            'proxyUrl' => 'http://$privateIp/dfs.php',
+                            'staticUrl' => 'http://$privateIp/data'
+                         ),
+                        ";
         }
+        if( ($n % 3) == 0 ){
+            $nodeStr = join("\n",$nodeStr);
+            $nodeStr = "
+                array(
+                    'weight' => 1,
+                    'nodes' => array($nodeStr),
+                 ),
+                ";
+            $configStr[] = $nodeStr;
+            $nodeStr = array();
+        }
+        $n++;
     }
-    $nodeStr = join("\n",$nodeStr);
-    $nodeStr = '
-        array(
-            "weight" => 1,
-            "nodes" =>array('.$nodeStr.'),
-         ),';
-    return $nodeStr;
+
+    if( ($nodeData % 3) != 0){
+        $nodeStr = join("\n",$nodeStr);
+        $nodeStr = "
+            array(
+                'weight' => 1,
+                'nodes' => array($nodeStr),
+             ),
+            ";
+        $configStr[] = $nodeStr;
+    }
+
+    $configStr = join( "\n", $configStr );
+    return $configStr;
 }
 
 function makeBaseUrls( $nodeData ){
