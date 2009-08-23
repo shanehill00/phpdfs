@@ -379,7 +379,6 @@ public class PHPDFSTestClient extends Thread {
     public void doTest( ){
         runTest();
         writeStats();
-        cleanup();
     }
 
     /**
@@ -555,6 +554,7 @@ public class PHPDFSTestClient extends Thread {
                 stats.write(report);
                 stats.flush();
                 stats.close();
+                cleanup();
             } catch( IOException e ) {
                 e.printStackTrace();
                 System.exit(99);
