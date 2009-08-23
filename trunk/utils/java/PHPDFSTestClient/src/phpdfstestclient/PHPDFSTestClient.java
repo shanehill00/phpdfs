@@ -245,8 +245,9 @@ public class PHPDFSTestClient extends Thread {
                 HashMap<String,Object> fileInfo;
                 for(Header header : method.getResponseHeaders() ){
                     if (header.getName().matches("^(Target-Node|Target_Node).*?$")){
+                        String targetNode = header.getValue();
                         fileInfo = new HashMap<String, Object>();
-                        fileInfo.put("url",url);
+                        fileInfo.put("url",targetNode);
                         fileInfo.put("time",System.currentTimeMillis());
                         fileInfo.put("size",fileLength);
                         uploadedFiles.add(fileInfo);
