@@ -91,30 +91,19 @@ function makeNodeStr( $nodeData ){
                             'staticUrl' => 'http://$privateIp/data'
                          ),
                         ";
-        }
-        if( ($n % 3) == 0 ){
-            $nodeStr = join("\n",$nodeStr);
-            $nodeStr = "
-                array(
-                    'weight' => 1,
-                    'nodes' => array($nodeStr),
-                 ),
-                ";
-            $configStr[] = $nodeStr;
-            $nodeStr = array();
+            if( ($n % 3) == 0 ){
+                $nodeStr = join("\n",$nodeStr);
+                $nodeStr = "
+                    array(
+                        'weight' => 1,
+                        'nodes' => array($nodeStr),
+                     ),
+                    ";
+                $configStr[] = $nodeStr;
+                $nodeStr = array();
+            }
         }
         $n++;
-    }
-
-    if( ($nodeData % 3) != 0){
-        $nodeStr = join("\n",$nodeStr);
-        $nodeStr = "
-            array(
-                'weight' => 1,
-                'nodes' => array($nodeStr),
-             ),
-            ";
-        $configStr[] = $nodeStr;
     }
 
     $configStr = join( "\n", $configStr );
