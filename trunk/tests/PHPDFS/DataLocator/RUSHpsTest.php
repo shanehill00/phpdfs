@@ -53,11 +53,6 @@ require_once 'PHPDFS/DataLocator/RUSHps.php';
  */
 class PHPDFS_DataLocator_RUSHpsTest extends PHPUnit_Framework_TestCase
 {
-    /**
-     * holds the GXC_VO that is used for the tests
-     *
-     * @var GXC_VO
-     */
     private $data_config = null;
     
     public function setUp(){

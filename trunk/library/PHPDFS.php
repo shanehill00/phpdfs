@@ -301,7 +301,7 @@ class PHPDFS
         }
     }
 
-    protected function handleMoveDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+    public function handleMoveDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
         throw new PHPDFS_Exception_PutException( "errno: $errno - errmsg: $errmsg - errfile: $errfile - errline: $errline" );
     }
     
@@ -329,7 +329,7 @@ class PHPDFS
         restore_error_handler();
     }
 
-    protected function handleMoveCreateError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+    public function handleMoveCreateError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
         throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
     
@@ -381,7 +381,7 @@ class PHPDFS
     }
 
 
-    protected function handleMoveStartError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+    public function handleMoveStartError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
         throw new PHPDFS_Exception_PutException( " $errno : $errmsg : $errfile : $errline " );
     }
     /**
@@ -530,11 +530,11 @@ class PHPDFS
         return $fh;
     }
 
-    protected function handleSpoolError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+    public function handleSpoolError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
         throw new PHPDFS_Exception_PutException( "errno: $errno - errmsg: $errmsg - errfile: $errfile - errline: $errline" );
     }
 
-    protected function handleForwardDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+    public function handleForwardDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
         throw new PHPDFS_Exception_PutException( "errno: $errno - errmsg: $errmsg - errfile: $errfile - errline: $errline" );
     }
 
@@ -579,11 +579,11 @@ class PHPDFS
         restore_error_handler();
     }
 
-    protected function handleDeleteDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+    public function handleDeleteDataError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
         throw new PHPDFS_Exception_DeleteException( " $errno : $errmsg : $errfile : $errline " );
     }
     
-    protected function handleForwardDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
+    public function handleForwardDeleteError( $errno, $errmsg, $errfile = "filename not given", $errline = "line number not given", $errcontext = "not given" ){
         throw new PHPDFS_Exception_DeleteException( " $errno : $errmsg : $errfile : $errline " );
     }
 
@@ -617,7 +617,7 @@ class PHPDFS
      */
     protected function spoolData( ){
         // write stdin to a temp file
-        $putData = fopen("php://input", "rb");
+        $putData = fopen($this->config['inputStream'], "rb");
         $fd = dio_open($this->tmpPath, O_CREAT | O_NONBLOCK | O_WRONLY );
         while( $data = fread($putData, $this->config['spoolReadSize'] ) ){
             dio_write($fd, $data);
