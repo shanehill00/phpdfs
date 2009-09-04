@@ -57,6 +57,12 @@ return array(
             // the number of bytes to read when spooling a file to disk
             'spoolReadSize' => 2048,
 
+            // the stream to read from when handling uploads
+            // most of the time you will not have to change this
+            // this setting is mostly useful when running the tests
+            // against the core test class
+            'inputStream' => 'php://input',
+
             // whether or not to write debug messages to the error log
             // this is mostly useful to see the propagation of an action
             // between nodes.
